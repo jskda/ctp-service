@@ -84,3 +84,4 @@ prisma/seed.wast
 prisma/seed.wat
 prisma/seed.wasm
 prisma/seed.wast
+/generated/prisma

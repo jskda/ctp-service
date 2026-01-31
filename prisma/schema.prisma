@@ -1,14 +1,127 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// schema.prisma
 
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
+  engineType = "client"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+/// Сущность: Клиент
+model Client {
+  id        String   @id @default(cuid())
+  name      String
+  techNotes Json? // Массив строк с технологическими настройками
+
+  // Связь: один ко многим с заказами
+  orders    Order[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Сущность: Тип пластины
+model PlateType {
+  id                  String   @id @default(cuid())
+  format              String
+  manufacturer        String
+  otherParams         Json?
+  minStockThreshold   Int      @default(0)
+
+  // Связь: один ко многим с движениями
+  movements           PlateMovement[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Сущность: Заказ
+model Order {
+  id            String   @id @default(cuid())
+  clientId      String
+  client        Client   @relation(fields: [clientId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  
+  colorMode     ColorMode
+  status        OrderStatus @default(NEW)
+  
+  // Снапшот клиентских настроек и условных пометок
+  notesSnapshot Json?
+
+  // Связь: один ко многим с движениями пластин (при использовании)
+  plateMovements PlateMovement[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Сущность: Событие движения пластины
+model PlateMovement {
+  id             String        @id @default(cuid())
+  plateTypeId    String
+  plateType      PlateType     @relation(fields: [plateTypeId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  
+  quantity       Int // Положительное число для входящих, отрицательное для исходящих
+  
+  movementType   MovementType
+  reason         MovementReason
+  responsibility Responsibility? // Только для scrap и loss
+  
+  // Связь с заказом (опциональна)
+  orderId        String?
+  order          Order?         @relation(fields: [orderId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([plateTypeId])
+  @@index([orderId])
+}
+
+/// --- Enums ---
+
+enum ColorMode {
+  CMYK
+  BLACK
+  MULTICOLOR
+}
+
+enum OrderStatus {
+  NEW
+  PROCESS
+  DONE
+}
+
+enum MovementType {
+  INCOMING
+  OUTGOING
+}
+
+enum MovementReason {
+  PURCHASE
+  RETURN
+  CORRECTION
+  NORMAL_USAGE
+  SCRAP_CLIENT
+  SCRAP_PRODUCTION
+  SCRAP_MATERIAL
+  LOSS_TEST
+  LOSS_CALIBRATION
+  LOSS_EQUIPMENT
+}
+
+enum Responsibility {
+  CLIENT
+  PRODUCTION
+  MATERIALS
+}
+
+model EventLog {
+  id          String   @id @default(cuid())
+  eventType   String
+  context     String // order, stock, system
+  payload     Json
+  timestamp   DateTime @default(now())
+
+  @@index([timestamp])
 }
