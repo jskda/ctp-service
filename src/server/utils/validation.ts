@@ -41,7 +41,9 @@ export const updatePlateTypeSchema = z.object({
 // --- PlateMovement Validation ---
 export const createPlateMovementSchema = z.object({
   plateTypeId: z.string().min(1, 'ID типа пластины обязателен'),
-  quantity: z.number().int().nonzero('Количество не может быть нулевым'),
+  quantity: z.number().int().refine(val => val !== 0, {
+    message: 'Количество не может быть нулевым'
+  }),
   movementType: z.enum(['INCOMING', 'OUTGOING']),
   reason: z.enum([
     'PURCHASE', 'RETURN', 'CORRECTION', 'NORMAL_USAGE',
@@ -60,6 +62,21 @@ export const createPlateMovementSchema = z.object({
     message: 'Поле responsibility обязательно для причин типа SCRAP или LOSS',
     path: ['responsibility'],
   }
+).refine(
+  (data) => {
+    // Проверка что входящие движения имеют положительное количество,
+    // а исходящие - отрицательное
+    if (data.movementType === 'INCOMING') {
+      return data.quantity > 0;
+    } else if (data.movementType === 'OUTGOING') {
+      return data.quantity < 0;
+    }
+    return true;
+  },
+  {
+    message: 'Входящие движения должны иметь положительное количество, исходящие - отрицательное',
+    path: ['quantity'],
+  }
 );
 
 // --- EventLog Validation ---
@@ -68,3 +85,34 @@ export const createEventLogSchema = z.object({
   context: z.enum(['order', 'stock', 'system']),
   payload: z.record(z.unknown()),
 });
+
+// --- Типы ---
+export type CreateClientInput = z.infer<typeof createClientSchema>;
+export type UpdateClientInput = z.infer<typeof updateClientSchema>;
+export type CreateOrderInput = z.infer<typeof createOrderSchema>;
+export type UpdateOrderInput = z.infer<typeof updateOrderSchema>;
+export type CreatePlateTypeInput = z.infer<typeof createPlateTypeSchema>;
+export type UpdatePlateTypeInput = z.infer<typeof updatePlateTypeSchema>;
+export type CreatePlateMovementInput = z.infer<typeof createPlateMovementSchema>;
+export type CreateEventLogInput = z.infer<typeof createEventLogSchema>;
+
+// --- Утилиты валидации ---
+export function validate<T>(schema: z.ZodSchema<T>, data: unknown): T {
+  return schema.parse(data);
+}
+
+export function safeValidate<T>(schema: z.ZodSchema<T>, data: unknown): {
+  success: boolean;
+  data?: T;
+  errors?: z.ZodError;
+} {
+  const result = schema.safeParse(data);
+  return result;
+}
+
+export function formatValidationErrors(error: z.ZodError): string[] {
+  return error.errors.map(err => {
+    const path = err.path.join('.');
+    return path ? `${path}: ${err.message}` : err.message;
+  });
+}

@@ -11,7 +11,8 @@
     "server": "tsx watch src/server/index.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
-    "db:studio": "prisma studio"
+    "db:seed": "dotenv -e .env -- tsx prisma/seed.ts",
+    "db:reset": "dotenv -e .env -- tsx -e \"import { execSync } from 'child_process'; execSync('npx prisma migrate reset --force', { stdio: 'inherit' }); execSync('npm run db:seed', { stdio: 'inherit' });\""
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
