@@ -1,29 +1,20 @@
-// src/server/routes/plateRoutes.ts
-import { Router } from 'express';
-// Импортируем контроллеры, когда они будут созданы
-// import { createPlateType, getAllPlateTypes, getPlateTypeById, setMinStockThreshold, recordPlateIncoming, recordPlateUsage, recordPlateScrap, recordPlateLoss, getCurrentStockLevels, getMovementsForPlateType } from '../controllers/plateController';
+import express from 'express';
+import { plateController } from '../controllers/plateController';
 
-const router = Router();
+const router = express.Router();
 
-// --- Routes for Plate Types ---
-// router.post('/types', createPlateType);
-// router.get('/types', getAllPlateTypes);
-// router.get('/types/:id', getPlateTypeById);
-// router.put('/types/:id/threshold', setMinStockThreshold); // For setting min stock level
+// Plate Types
+router.get('/types', plateController.getAllTypes);
+router.get('/types/:id', plateController.getTypeById);
+router.post('/types', plateController.createType);
+router.put('/types/:id', plateController.updateType);
+router.delete('/types/:id', plateController.deleteType);
 
-// --- Routes for Plate Movements ---
-// router.post('/movements/incoming', recordPlateIncoming);
-// router.post('/movements/usage', recordPlateUsage);
-// router.post('/movements/scrap', recordPlateScrap);
-// router.post('/movements/loss', recordPlateLoss);
+// Plate Movements
+router.post('/movements', plateController.createMovement);
+router.get('/movements', plateController.getMovements);
 
-// --- Routes for Aggregated Views ---
-// router.get('/stock', getCurrentStockLevels); // Action: View Current Stock
-// router.get('/types/:id/movements', getMovementsForPlateType); // View history for a type
-
-// Пока что добавим заглушку
-router.get('/', (req, res) => {
-  res.json({ message: 'Plates route placeholder' });
-});
+// Stock overview
+router.get('/stock', plateController.getStock);
 
 export default router;
