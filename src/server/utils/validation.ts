@@ -50,7 +50,9 @@ export const recordReturnSchema = z.object({
 
 export const recordCorrectionSchema = z.object({
   plateTypeId: z.string().min(1, 'ID типа пластины обязателен'),
-  quantity: z.number().int().nonzero('Количество не может быть нулевым'),
+  quantity: z.number().int().refine((val) => val !== 0, {
+    message: 'Количество не может быть нулевым',
+  }),
 });
 
 // --- PlateMovement Validation - Использование по заказу ---
