@@ -1,9 +1,9 @@
 import { Request, Response } from 'express';
 import { prisma } from '../app';
-import { createClientSchema, updateClientSchema } from '../utils/validation';
+import { createClientSchema, updateClientTechNotesSchema } from '../utils/validation';
 
 export const clientController = {
-  // GET /api/clients
+  // GET /api/clients - список всех клиентов
   async getAll(req: Request, res: Response) {
     try {
       const clients = await prisma.client.findMany({
@@ -31,7 +31,7 @@ export const clientController = {
     }
   },
 
-  // GET /api/clients/:id
+  // GET /api/clients/:id - получить клиента по ID
   async getById(req: Request, res: Response) {
     try {
       const { id } = req.params;
@@ -62,7 +62,7 @@ export const clientController = {
     }
   },
 
-  // POST /api/clients
+  // POST /api/clients - ДЕЙСТВИЕ: Создать клиента
   async create(req: Request, res: Response) {
     try {
       const validatedData = createClientSchema.parse(req.body);
@@ -90,11 +90,11 @@ export const clientController = {
     }
   },
 
-  // PUT /api/clients/:id
-  async update(req: Request, res: Response) {
+  // PUT /api/clients/:id/tech-notes - ДЕЙСТВИЕ: Изменить клиентские настройки
+  async updateTechNotes(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const validatedData = updateClientSchema.parse(req.body);
+      const validatedData = updateClientTechNotesSchema.parse(req.body);
       
       const client = await prisma.client.update({
         where: { id },
@@ -104,9 +104,9 @@ export const clientController = {
       // Логируем событие
       await prisma.eventLog.create({
         data: {
-          eventType: 'client.updated',
+          eventType: 'client.tech-notes.updated',
           context: 'system',
-          payload: { clientId: client.id, changes: validatedData },
+          payload: { clientId: client.id, newTechNotes: client.techNotes },
         },
       });
 
@@ -118,48 +118,8 @@ export const clientController = {
       if (error.code === 'P2025') {
         return res.status(404).json({ success: false, error: 'Client not found' });
       }
-      console.error('Error updating client:', error);
-      res.status(500).json({ success: false, error: 'Failed to update client' });
-    }
-  },
-
-  // DELETE /api/clients/:id
-  async delete(req: Request, res: Response) {
-    try {
-      const { id } = req.params;
-      
-      // Проверяем наличие заказов
-      const orderCount = await prisma.order.count({
-        where: { clientId: id },
-      });
-
-      if (orderCount > 0) {
-        return res.status(400).json({
-          success: false,
-          error: 'Cannot delete client with existing orders',
-        });
-      }
-
-      await prisma.client.delete({
-        where: { id },
-      });
-
-      // Логируем событие
-      await prisma.eventLog.create({
-        data: {
-          eventType: 'client.deleted',
-          context: 'system',
-          payload: { clientId: id },
-        },
-      });
-
-      res.json({ success: true, message: 'Client deleted successfully' });
-    } catch (error: any) {
-      if (error.code === 'P2025') {
-        return res.status(404).json({ success: false, error: 'Client not found' });
-      }
-      console.error('Error deleting client:', error);
-      res.status(500).json({ success: false, error: 'Failed to delete client' });
+      console.error('Error updating client tech notes:', error);
+      res.status(500).json({ success: false, error: 'Failed to update client tech notes' });
     }
   },
 };
