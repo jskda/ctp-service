@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { prisma } from '../app';
 import { createClientSchema, updateClientTechNotesSchema } from '../utils/validation';
 
@@ -36,8 +36,11 @@ export const clientController = {
     try {
       const { id } = req.params;
       
+      // Исправление: гарантируем, что id — строка
+      const clientId = typeof id === 'string' ? id : id[0];
+
       const client = await prisma.client.findUnique({
-        where: { id },
+        where: { id: clientId },
         include: {
           orders: {
             include: {
@@ -94,10 +97,14 @@ export const clientController = {
   async updateTechNotes(req: Request, res: Response) {
     try {
       const { id } = req.params;
+      
+      // Исправление: гарантируем, что id — строка
+      const clientId = typeof id === 'string' ? id : id[0];
+
       const validatedData = updateClientTechNotesSchema.parse(req.body);
       
       const client = await prisma.client.update({
-        where: { id },
+        where: { id: clientId },
         data: validatedData,
       });
 

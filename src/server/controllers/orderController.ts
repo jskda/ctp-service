@@ -1,9 +1,7 @@
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { prisma } from '../app';
 import {
   createOrderSchema,
-  startOrderProcessingSchema,
-  completeOrderSchema,
 } from '../utils/validation';
 
 export const orderController = {
@@ -52,8 +50,11 @@ export const orderController = {
     try {
       const { id } = req.params;
       
+      // 🔑 КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: гарантируем, что id — строка
+      const orderId = typeof id === 'string' ? id : id[0];
+
       const order = await prisma.order.findUnique({
-        where: { id },
+        where: { id: orderId }, // ← теперь точно string
         include: {
           client: true,
           plateMovements: {
@@ -145,14 +146,17 @@ export const orderController = {
     }
   },
 
-  // POST /api/orders/:id/start-processing - ДЕЙСТВИЕ: Перевести заказ в работу
+  // POST /api/orders/:id/start-processing
   async startProcessing(req: Request, res: Response) {
     try {
       const { id } = req.params;
       
+      // 🔑 КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ
+      const orderId = typeof id === 'string' ? id : id[0];
+
       // Получаем текущий заказ
       const currentOrder = await prisma.order.findUnique({
-        where: { id },
+        where: { id: orderId }, // ← теперь точно string
       });
 
       if (!currentOrder) {
@@ -167,13 +171,12 @@ export const orderController = {
         });
       }
 
-      // Логируем изменение статуса
       await prisma.eventLog.create({
         data: {
           eventType: 'order.status.changed',
           context: 'order',
           payload: {
-            orderId: id,
+            orderId: orderId, // ← используем orderId, а не id
             oldStatus: currentOrder.status,
             newStatus: 'PROCESS',
             changedAt: new Date(),
@@ -181,9 +184,8 @@ export const orderController = {
         },
       });
 
-      // Меняем статус
       const order = await prisma.order.update({
-        where: { id },
+        where: { id: orderId }, // ← снова orderId
         data: { status: 'PROCESS' },
       });
 
@@ -197,21 +199,22 @@ export const orderController = {
     }
   },
 
-  // POST /api/orders/:id/complete - ДЕЙСТВИЕ: Завершить заказ
+  // POST /api/orders/:id/complete
   async complete(req: Request, res: Response) {
     try {
       const { id } = req.params;
       
-      // Получаем текущий заказ
+      // 🔑 КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ
+      const orderId = typeof id === 'string' ? id : id[0];
+
       const currentOrder = await prisma.order.findUnique({
-        where: { id },
+        where: { id: orderId }, // ← точно string
       });
 
       if (!currentOrder) {
         return res.status(404).json({ success: false, error: 'Order not found' });
       }
 
-      // Проверяем статус: только из PROCESS можно перейти в DONE
       if (currentOrder.status !== 'PROCESS') {
         return res.status(400).json({
           success: false,
@@ -219,13 +222,12 @@ export const orderController = {
         });
       }
 
-      // Логируем изменение статуса
       await prisma.eventLog.create({
         data: {
           eventType: 'order.status.changed',
           context: 'order',
           payload: {
-            orderId: id,
+            orderId: orderId,
             oldStatus: currentOrder.status,
             newStatus: 'DONE',
             changedAt: new Date(),
@@ -233,9 +235,8 @@ export const orderController = {
         },
       });
 
-      // Меняем статус
       const order = await prisma.order.update({
-        where: { id },
+        where: { id: orderId },
         data: { status: 'DONE' },
       });
 

@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import { prisma } from '../app';
 import {
   createPlateTypeSchema,
@@ -67,8 +67,11 @@ export const plateController = {
     try {
       const { id } = req.params;
       
+      // Исправление: гарантируем, что id — строка
+      const plateTypeId = typeof id === 'string' ? id : id[0];
+
       const plateType = await prisma.plateType.findUnique({
-        where: { id },
+        where: { id: plateTypeId },
         include: {
           movements: {
             include: {
@@ -92,7 +95,7 @@ export const plateController = {
       // Вычисляем остаток
       const stock = await prisma.plateMovement.groupBy({
         by: ['plateTypeId'],
-        where: { plateTypeId: id },
+        where: { plateTypeId },
         _sum: { quantity: true },
       });
 
@@ -118,8 +121,16 @@ export const plateController = {
     try {
       const validatedData = createPlateTypeSchema.parse(req.body);
       
+      // Преобразуем otherParams в правильный тип для Prisma (Json)
+      const dataToCreate = {
+        format: validatedData.format,
+        manufacturer: validatedData.manufacturer,
+        otherParams: validatedData.otherParams ?? {},
+        minStockThreshold: validatedData.minStockThreshold,
+      };
+
       const plateType = await prisma.plateType.create({
-        data: validatedData,
+        data: dataToCreate,
       });
 
       // Логируем событие
@@ -145,10 +156,11 @@ export const plateController = {
   async updateThreshold(req: Request, res: Response) {
     try {
       const { id } = req.params;
+      const plateTypeId = typeof id === 'string' ? id : id[0];
       const validatedData = updatePlateTypeThresholdSchema.parse(req.body);
       
       const plateType = await prisma.plateType.update({
-        where: { id },
+        where: { id: plateTypeId },
         data: { minStockThreshold: validatedData.minStockThreshold },
       });
 
@@ -158,7 +170,7 @@ export const plateController = {
           eventType: 'plate.threshold.updated',
           context: 'stock',
           payload: {
-            plateTypeId: id,
+            plateTypeId: plateTypeId,
             newThreshold: validatedData.minStockThreshold,
           },
         },
@@ -369,7 +381,7 @@ export const plateController = {
       const movement = await prisma.plateMovement.create({
         data: {
           plateTypeId: validatedData.plateTypeId,
-          quantity: -validatedData.quantity, // Отрицательное для списания
+          quantity: -validatedData.quantity,
           movementType: 'OUTGOING',
           reason: 'NORMAL_USAGE',
           orderId: validatedData.orderId,
@@ -454,7 +466,7 @@ export const plateController = {
             orderId: movement.orderId,
             responsibility: movement.responsibility,
             timestamp: movement.createdAt,
-            description: validatedData.reason,
+            description: validatedData.reason ?? '',
           },
         },
       });
@@ -515,7 +527,7 @@ export const plateController = {
             orderId: movement.orderId,
             responsibility: movement.responsibility,
             timestamp: movement.createdAt,
-            description: validatedData.reason,
+            description: validatedData.reason ?? '',
           },
         },
       });
@@ -579,7 +591,7 @@ export const plateController = {
             orderId: movement.orderId,
             responsibility: movement.responsibility,
             timestamp: movement.createdAt,
-            description: validatedData.reason,
+            description: validatedData.reason ?? '',
           },
         },
       });
@@ -726,7 +738,7 @@ export const plateController = {
             movementType: movement.movementType,
             reason: movement.reason,
             timestamp: movement.createdAt,
-            description: validatedData.description,
+            description: validatedData.description ?? '',
           },
         },
       });

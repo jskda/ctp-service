@@ -16,20 +16,11 @@ export const createOrderSchema = z.object({
   colorMode: z.enum(['CMYK', 'BLACK', 'MULTICOLOR']),
 });
 
-// Статус меняется только через действия, не через прямое редактирование
-export const startOrderProcessingSchema = z.object({
-  orderId: z.string().min(1, 'ID заказа обязателен'),
-});
-
-export const completeOrderSchema = z.object({
-  orderId: z.string().min(1, 'ID заказа обязателен'),
-});
-
 // --- PlateType Validation ---
 export const createPlateTypeSchema = z.object({
   format: z.string().min(1, 'Формат обязателен'),
   manufacturer: z.string().min(1, 'Производитель обязателен'),
-  otherParams: z.record(z.string(), z.unknown()).optional(),
+  otherParams: z.any().optional(), // Любой JSON-объект
   minStockThreshold: z.number().int().min(0).default(0),
 });
 
