@@ -7,15 +7,15 @@ interface OrderStatusBadgeProps {
 
 export function OrderStatusBadge({ status }: OrderStatusBadgeProps) {
   const variantMap: Record<OrderStatus, "default" | "secondary" | "outline"> = {
-    new: "outline",
-    process: "default",
-    done: "secondary",
+    NEW: "outline",
+    PROCESS: "default",
+    DONE: "secondary",
   };
 
   const labelMap: Record<OrderStatus, string> = {
-    new: "Новый",
-    process: "В работе",
-    done: "Завершён",
+    NEW: "Новый",
+    PROCESS: "В работе",
+    DONE: "Завершён",
   };
 
   return (

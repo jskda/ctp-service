@@ -1,11 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
-import { Order } from '@/types';
+import { Order, ApiResponse } from '@/types';
 
 export function useOrders() {
   return useQuery({
     queryKey: ['orders'],
-    queryFn: () => apiClient.get<Order[]>('/orders'),
+    queryFn: async () => {
+      const response = await apiClient.get<ApiResponse<Order[]>>('/orders');
+      return response.data;
+    },
   });
 }
 
@@ -14,7 +17,7 @@ export function useCreateOrder() {
 
   return useMutation({
     mutationFn: (data: { clientId: string; colorMode: string }) =>
-      apiClient.post<Order>('/orders', data),
+      apiClient.post<ApiResponse<Order>>('/orders', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
     },
@@ -26,7 +29,7 @@ export function useStartProcessing() {
 
   return useMutation({
     mutationFn: (orderId: string) =>
-      apiClient.post(`/orders/${orderId}/start-processing`, {}),
+      apiClient.post<ApiResponse<Order>>(`/orders/${orderId}/start-processing`, {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
     },
@@ -38,7 +41,7 @@ export function useCompleteOrder() {
 
   return useMutation({
     mutationFn: (orderId: string) =>
-      apiClient.post(`/orders/${orderId}/complete`, {}),
+      apiClient.post<ApiResponse<Order>>(`/orders/${orderId}/complete`, {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
     },

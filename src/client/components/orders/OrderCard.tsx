@@ -19,7 +19,7 @@ export function OrderCard({ order, onAction, hasFolder }: OrderCardProps) {
   const handleAction = async (action: string) => {
     setIsLoading(true);
     try {
-      await onAction(action, order.orderId);
+      await onAction(action, order.id);
     } finally {
       setIsLoading(false);
     }
@@ -28,7 +28,7 @@ export function OrderCard({ order, onAction, hasFolder }: OrderCardProps) {
   const renderActions = () => {
     const actions = [];
 
-    if (order.status === 'new') {
+    if (order.status === 'NEW') {
       actions.push(
         <Button
           key="start"
@@ -41,7 +41,7 @@ export function OrderCard({ order, onAction, hasFolder }: OrderCardProps) {
       );
     }
 
-    if (order.status === 'process') {
+    if (order.status === 'PROCESS') {
       actions.push(
         <Button
           key="complete"
@@ -81,8 +81,8 @@ export function OrderCard({ order, onAction, hasFolder }: OrderCardProps) {
     return actions;
   };
 
-  const hasAutoMarks = order.notesSnapshot?.autoMarks && order.notesSnapshot.autoMarks.length > 0;
-  const hasClientNotes = order.notesSnapshot?.clientNotes && order.notesSnapshot.clientNotes.length > 0;
+  const hasAutoMarks = order.notesSnapshot?.automatedNotes && order.notesSnapshot.automatedNotes.length > 0;
+  const hasClientNotes = order.notesSnapshot?.clientTechNotes && order.notesSnapshot.clientTechNotes.length > 0;
 
   return (
     <Card className="hover:shadow-lg transition-shadow">
@@ -90,7 +90,7 @@ export function OrderCard({ order, onAction, hasFolder }: OrderCardProps) {
         <div className="flex justify-between items-start">
           <div className="space-y-1">
             <CardTitle className="text-lg">
-              Заказ #{order.orderId.slice(0, 8)}
+              Заказ #{order.id.slice(0, 8)}
             </CardTitle>
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">
@@ -114,7 +114,7 @@ export function OrderCard({ order, onAction, hasFolder }: OrderCardProps) {
                 Автоматические пометки:
               </div>
               <div className="flex flex-wrap gap-2">
-                {order.notesSnapshot.autoMarks.map((mark, idx) => (
+                {order.notesSnapshot.automatedNotes.map((mark, idx) => (
                   <AutoMarkBadge key={idx} mark={mark} />
                 ))}
               </div>
@@ -129,7 +129,7 @@ export function OrderCard({ order, onAction, hasFolder }: OrderCardProps) {
               </div>
               <div className="text-sm bg-muted p-2 rounded-md">
                 <ul className="list-disc list-inside space-y-1">
-                  {order.notesSnapshot.clientNotes.map((note, idx) => (
+                  {order.notesSnapshot.clientTechNotes.map((note, idx) => (
                     <li key={idx} className="text-foreground">{note}</li>
                   ))}
                 </ul>

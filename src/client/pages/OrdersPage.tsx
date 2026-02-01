@@ -8,9 +8,13 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { useState } from "react";
 
 export function OrdersPage() {
-  const { data: orders = [], isLoading: ordersLoading, error: ordersError } = useOrders();
-  const { data: clients = [], error: clientsError } = useClients();
-  const { data: deficits = [], error: deficitError } = useDeficit();
+  const { data: ordersData, isLoading: ordersLoading, error: ordersError } = useOrders();
+  const { data: clientsData, error: clientsError } = useClients();
+  const { data: deficitsData, error: deficitError } = useDeficit();
+  
+  const orders = ordersData || [];
+  const clients = clientsData || [];
+  const deficits = deficitsData || [];
   
   const createOrderMutation = useCreateOrder();
   const startProcessingMutation = useStartProcessing();
