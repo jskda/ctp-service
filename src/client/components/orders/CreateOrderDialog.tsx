@@ -27,7 +27,7 @@ type CreateOrderForm = z.infer<typeof createOrderSchema>;
 
 interface CreateOrderDialogProps {
   clients: Client[];
-  onCreate: (data: CreateOrderForm) => Promise<void>;
+  onCreate: ( CreateOrderForm) => Promise<void>;
 }
 
 export function CreateOrderDialog({ clients, onCreate }: CreateOrderDialogProps) {
@@ -42,7 +42,7 @@ export function CreateOrderDialog({ clients, onCreate }: CreateOrderDialogProps)
     },
   });
 
-  const handleSubmit = async (data: CreateOrderForm) => {
+  const handleSubmit = async ( CreateOrderForm) => {
     setIsLoading(true);
     try {
       await onCreate(data);
@@ -72,7 +72,7 @@ export function CreateOrderDialog({ clients, onCreate }: CreateOrderDialogProps)
               name="clientId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Клиент</FormLabel>
+                  <FormLabel>Клиент *</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
@@ -81,7 +81,7 @@ export function CreateOrderDialog({ clients, onCreate }: CreateOrderDialogProps)
                     </FormControl>
                     <SelectContent>
                       {clients.map((client) => (
-                        <SelectItem key={client.clientId} value={client.clientId}>
+                        <SelectItem key={client.id} value={client.id}>
                           {client.name}
                         </SelectItem>
                       ))}
@@ -96,7 +96,7 @@ export function CreateOrderDialog({ clients, onCreate }: CreateOrderDialogProps)
               name="colorMode"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Красочность</FormLabel>
+                  <FormLabel>Красочность *</FormLabel>
                   <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
                       <SelectTrigger>
