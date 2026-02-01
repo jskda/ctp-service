@@ -29,7 +29,7 @@ export const completeOrderSchema = z.object({
 export const createPlateTypeSchema = z.object({
   format: z.string().min(1, 'Формат обязателен'),
   manufacturer: z.string().min(1, 'Производитель обязателен'),
-  otherParams: z.record(z.unknown()).optional(),
+  otherParams: z.record(z.string(), z.unknown()).optional(),
   minStockThreshold: z.number().int().min(0).default(0),
 });
 
