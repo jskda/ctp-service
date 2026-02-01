@@ -1,10 +1,11 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 export const apiClient = {
   async get<T>(endpoint: string): Promise<T> {
     const response = await fetch(`${API_BASE_URL}${endpoint}`);
     if (!response.ok) {
-      throw new Error(`GET request failed: ${response.status}`);
+      const error = await response.json().catch(() => ({ message: response.statusText }));
+      throw new Error(error.message || `GET request failed: ${response.status}`);
     }
     return response.json() as T;
   },
@@ -18,7 +19,8 @@ export const apiClient = {
       body: JSON.stringify(data),
     });
     if (!response.ok) {
-      throw new Error(`POST request failed: ${response.status}`);
+      const error = await response.json().catch(() => ({ message: response.statusText }));
+      throw new Error(error.message || `POST request failed: ${response.status}`);
     }
     return response.json() as T;
   },
@@ -32,7 +34,8 @@ export const apiClient = {
       body: JSON.stringify(data),
     });
     if (!response.ok) {
-      throw new Error(`PUT request failed: ${response.status}`);
+      const error = await response.json().catch(() => ({ message: response.statusText }));
+      throw new Error(error.message || `PUT request failed: ${response.status}`);
     }
     return response.json() as T;
   },

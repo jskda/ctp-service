@@ -44,22 +44,3 @@ export function useCompleteOrder() {
     },
   });
 }
-
-export function useCreateOrderFolder() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: (orderId: string) =>
-      apiClient.post(`/orders/${orderId}/folder`, {}),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['orders'] });
-    },
-  });
-}
-
-export function useOpenOrderFolder() {
-  return useMutation({
-    mutationFn: (orderId: string) =>
-      apiClient.post(`/orders/${orderId}/folder/open`, {}),
-  });
-}

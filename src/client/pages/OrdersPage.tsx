@@ -1,6 +1,6 @@
-import { useOrders, useCreateOrder, useStartProcessing, useCompleteOrder, useCreateOrderFolder, useOpenOrderFolder } from "@/hooks/useOrders";
+import { useOrders, useCreateOrder, useStartProcessing, useCompleteOrder } from "@/hooks/useOrders";
 import { useClients } from "@/hooks/useClients";
-import { useDeficit } from "@/hooks/useDeficit";
+import { useDeficit } from "@/hooks/usePlates";
 import { OrderList } from "@/components/orders/OrderList";
 import { CreateOrderDialog } from "@/components/orders/CreateOrderDialog";
 import { Header } from "@/components/layout/Header";
@@ -8,15 +8,13 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { useState } from "react";
 
 export function OrdersPage() {
-  const { data: orders = [], isLoading: ordersLoading } = useOrders();
-  const { data: clients = [] } = useClients();
-  const { data: deficits = [] } = useDeficit();
+  const { data: orders = [], isLoading: ordersLoading, error: ordersError } = useOrders();
+  const { data: clients = [], error: clientsError } = useClients();
+  const { data: deficits = [], error: deficitError } = useDeficit();
   
   const createOrderMutation = useCreateOrder();
   const startProcessingMutation = useStartProcessing();
   const completeOrderMutation = useCompleteOrder();
-  const createFolderMutation = useCreateOrderFolder();
-  const openFolderMutation = useOpenOrderFolder();
 
   const [folderStatus, setFolderStatus] = useState<Record<string, boolean>>({});
 
@@ -30,18 +28,17 @@ export function OrdersPage() {
           await completeOrderMutation.mutateAsync(orderId);
           break;
         case 'create-folder':
-          await createFolderMutation.mutateAsync(orderId);
-          setFolderStatus(prev => ({ ...prev, [orderId]: true }));
+          alert('Создание папки пока не реализовано в бэкенде');
           break;
         case 'open-folder':
-          await openFolderMutation.mutateAsync(orderId);
+          alert('Открытие папки пока не реализовано в бэкенде');
           break;
         default:
           console.warn(`Unknown action: ${action}`);
       }
     } catch (error) {
       console.error('Action failed:', error);
-      alert(`Ошибка при выполнении действия: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
+      alert(`Ошибка: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
     }
   };
 
@@ -50,9 +47,23 @@ export function OrdersPage() {
       await createOrderMutation.mutateAsync(data);
     } catch (error) {
       console.error('Create order failed:', error);
-      alert(`Ошибка при создании заказа: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
+      alert(`Ошибка: ${error instanceof Error ? error.message : 'Неизвестная ошибка'}`);
     }
   };
+
+  // Показываем ошибки если они есть
+  if (ordersError || clientsError || deficitError) {
+    return (
+      <MainLayout>
+        <div className="text-destructive p-4">
+          <h2 className="font-bold mb-2">Ошибки загрузки:</h2>
+          {ordersError && <div>Заказы: {ordersError.message}</div>}
+          {clientsError && <div>Клиенты: {clientsError.message}</div>}
+          {deficitError && <div>Дефицит: {deficitError.message}</div>}
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
