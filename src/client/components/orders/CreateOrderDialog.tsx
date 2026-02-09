@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -27,7 +27,7 @@ type CreateOrderForm = z.infer<typeof createOrderSchema>;
 
 interface CreateOrderDialogProps {
   clients: Client[];
-  onCreate: ( CreateOrderForm) => Promise<void>;
+  onCreate: (data: CreateOrderForm) => Promise<void>;
 }
 
 export function CreateOrderDialog({ clients, onCreate }: CreateOrderDialogProps) {
@@ -42,12 +42,14 @@ export function CreateOrderDialog({ clients, onCreate }: CreateOrderDialogProps)
     },
   });
 
-  const handleSubmit = async ( CreateOrderForm) => {
+  const handleSubmit = async (data: CreateOrderForm) => {  // ← ИСПРАВЛЕНО: добавлен параметр data
     setIsLoading(true);
     try {
       await onCreate(data);
       form.reset();
       setOpen(false);
+    } catch (error) {
+      console.error('Create order failed:', error);
     } finally {
       setIsLoading(false);
     }
@@ -64,6 +66,9 @@ export function CreateOrderDialog({ clients, onCreate }: CreateOrderDialogProps)
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Создать новый заказ</DialogTitle>
+          <DialogDescription>
+            Заполните информацию о заказе
+          </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">

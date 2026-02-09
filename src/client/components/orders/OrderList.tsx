@@ -20,10 +20,10 @@ export function OrderList({ orders, onAction, folderStatus }: OrderListProps) {
     <div className="space-y-4">
       {orders.map((order) => (
         <OrderCard
-          key={order.orderId}
+          key={order.id}
           order={order}
           onAction={onAction}
-          hasFolder={folderStatus[order.orderId] || false}
+          hasFolder={folderStatus[order.id] || false}
         />
       ))}
     </div>

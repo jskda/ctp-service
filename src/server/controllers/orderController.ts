@@ -1,8 +1,7 @@
+// src/server/controllers/orderController.ts
 import type { Request, Response } from 'express';
 import { prisma } from '../app';
-import {
-  createOrderSchema,
-} from '../utils/validation';
+import { createOrderSchema } from '../utils/validation';
 
 export const orderController = {
   // GET /api/orders - список всех заказов
@@ -49,12 +48,10 @@ export const orderController = {
   async getById(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      
-      // 🔑 КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: гарантируем, что id — строка
       const orderId = typeof id === 'string' ? id : id[0];
 
       const order = await prisma.order.findUnique({
-        where: { id: orderId }, // ← теперь точно string
+        where: { id: orderId },
         include: {
           client: true,
           plateMovements: {
@@ -76,7 +73,7 @@ export const orderController = {
     }
   },
 
-  // POST /api/orders - ДЕЙСТВИЕ: Создать заказ
+  // POST /api/orders - ДЕЙСТВИЕ: Создать заказ (согласно спецификации)
   async create(req: Request, res: Response) {
     try {
       const validatedData = createOrderSchema.parse(req.body);
@@ -90,37 +87,43 @@ export const orderController = {
         return res.status(404).json({ success: false, error: 'Client not found' });
       }
 
-      // Создаем снапшот настроек клиента
+      // Создаем снапшот согласно спецификации (раздел 5.1.3)
       const notesSnapshot: any = {};
       
-      // Добавляем клиентские настройки в снапшот
-      if (client.techNotes) {
+      // 1. Клиентские технологические настройки (раздел 5)
+      if (client.techNotes && Array.isArray(client.techNotes)) {
         notesSnapshot.clientTechNotes = client.techNotes;
       }
 
-      // Добавляем автоматические пометки по красочности
+      // 2. Автоматические контрольные пометки по красочности (раздел 3.5)
+      const automatedNotes: string[] = [];
+      
+      // MULTICOLOR - обязательная контрольная пометка (раздел 3.5)
       if (validatedData.colorMode === 'MULTICOLOR') {
-        notesSnapshot.automatedNotes = ['Overprint control'];
+        automatedNotes.push('Overprint control');
       }
-
-      // Условная пометка для BLACK (пример для одного клиента)
+      
+      // BLACK - условная пометка для определенных клиентов (раздел 5.4)
       // В реальной системе это будет проверяться по конкретному клиенту
       if (validatedData.colorMode === 'BLACK' && client.id === 'SPECIAL_CLIENT_ID') {
-        notesSnapshot.automatedNotes = [
-          ...(notesSnapshot.automatedNotes || []),
-          'Необходимо компенсировать растискивание (проверить параметры RIP)',
-        ];
+        automatedNotes.push('Необходимо компенсировать растискивание (проверить параметры RIP)');
+      }
+      
+      if (automatedNotes.length > 0) {
+        notesSnapshot.automatedNotes = automatedNotes;
       }
 
+      // Создаем заказ со снапшотом
       const order = await prisma.order.create({
         data: {
           clientId: validatedData.clientId,
           colorMode: validatedData.colorMode,
-          notesSnapshot,
+          status: 'NEW', // Автоматически согласно спецификации 3.2
+          notesSnapshot: Object.keys(notesSnapshot).length > 0 ? notesSnapshot : undefined,
         },
       });
 
-      // Логируем событие
+      // Логируем событие согласно спецификации (раздел 3.6)
       await prisma.eventLog.create({
         data: {
           eventType: 'order.created',
@@ -136,34 +139,39 @@ export const orderController = {
         },
       });
 
-      res.status(201).json({ success: true, data: order });
+      res.status(201).json({ 
+        success: true, 
+        data: order,
+        message: 'Заказ создан с применением контрольных пометок согласно спецификации'
+      });
     } catch (error: any) {
       if (error.name === 'ZodError') {
-        return res.status(400).json({ success: false, error: 'Validation failed', details: error.errors });
+        return res.status(400).json({ 
+          success: false, 
+          error: 'Validation failed', 
+          details: error.errors 
+        });
       }
       console.error('Error creating order:', error);
       res.status(500).json({ success: false, error: 'Failed to create order' });
     }
   },
 
-  // POST /api/orders/:id/start-processing
+  // POST /api/orders/:id/start-processing - ДЕЙСТВИЕ: Перевести заказ в работу
   async startProcessing(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      
-      // 🔑 КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ
       const orderId = typeof id === 'string' ? id : id[0];
 
-      // Получаем текущий заказ
       const currentOrder = await prisma.order.findUnique({
-        where: { id: orderId }, // ← теперь точно string
+        where: { id: orderId },
       });
 
       if (!currentOrder) {
         return res.status(404).json({ success: false, error: 'Order not found' });
       }
 
-      // Проверяем статус: только из NEW можно перейти в PROCESS
+      // Проверяем статус: только из NEW можно перейти в PROCESS (раздел 3.2)
       if (currentOrder.status !== 'NEW') {
         return res.status(400).json({
           success: false,
@@ -171,12 +179,13 @@ export const orderController = {
         });
       }
 
+      // Логируем событие изменения статуса
       await prisma.eventLog.create({
         data: {
           eventType: 'order.status.changed',
           context: 'order',
           payload: {
-            orderId: orderId, // ← используем orderId, а не id
+            orderId: orderId,
             oldStatus: currentOrder.status,
             newStatus: 'PROCESS',
             changedAt: new Date(),
@@ -185,11 +194,15 @@ export const orderController = {
       });
 
       const order = await prisma.order.update({
-        where: { id: orderId }, // ← снова orderId
+        where: { id: orderId },
         data: { status: 'PROCESS' },
       });
 
-      res.json({ success: true, data: order });
+      res.json({ 
+        success: true, 
+        data: order,
+        message: 'Заказ переведен в работу. Проверьте контрольные пометки.'
+      });
     } catch (error: any) {
       if (error.code === 'P2025') {
         return res.status(404).json({ success: false, error: 'Order not found' });
@@ -199,16 +212,14 @@ export const orderController = {
     }
   },
 
-  // POST /api/orders/:id/complete
+  // POST /api/orders/:id/complete - ДЕЙСТВИЕ: Завершить заказ
   async complete(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      
-      // 🔑 КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ
       const orderId = typeof id === 'string' ? id : id[0];
 
       const currentOrder = await prisma.order.findUnique({
-        where: { id: orderId }, // ← точно string
+        where: { id: orderId },
       });
 
       if (!currentOrder) {
@@ -240,7 +251,11 @@ export const orderController = {
         data: { status: 'DONE' },
       });
 
-      res.json({ success: true, data: order });
+      res.json({ 
+        success: true, 
+        data: order,
+        message: 'Заказ завершен'
+      });
     } catch (error: any) {
       if (error.code === 'P2025') {
         return res.status(404).json({ success: false, error: 'Order not found' });

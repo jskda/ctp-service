@@ -1,11 +1,31 @@
-import app from './app';
-import dotenv from 'dotenv';
+// src/server/index.ts
+import app, { PORT } from './app';
+import { prisma } from './prismaClient'; // Импортируем экземпляр PrismaClient из нового файла
 
-dotenv.config();
+const startServer = async () => {
+  try {
+    await prisma.$connect(); // Подключаемся к базе данных через глобальный экземпляр
+    console.log('🔌 Подключено к базе данных');
 
-const PORT = process.env.PORT || 3001;
+    app.listen(PORT, () => {
+      console.log(`🚀 Server is running on http://localhost:${PORT}`);
+    });
+  } catch (error) {
+    console.error('❌ Ошибка при запуске сервера:', error);
+    process.exit(1);
+  }
+};
 
-app.listen(PORT, () => {
-  console.log(`🚀 CTP Service API running on http://localhost:${PORT}`);
-  console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
+process.on('SIGINT', async () => {
+  console.log('\n shutting down...');
+  await prisma.$disconnect();
+  process.exit(0);
 });
+
+process.on('SIGTERM', async () => {
+  console.log('\n shutting down...');
+  await prisma.$disconnect();
+  process.exit(0);
+});
+
+startServer();

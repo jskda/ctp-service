@@ -1,9 +1,9 @@
 import { DeficitIndicator } from "@/components/plates/DeficitIndicator";
-import { StockDeficit } from "@/types";
+import { PlateTypeThreshold } from "@/types";
 import { Bell } from "lucide-react";
 
 interface HeaderProps {
-  deficits: StockDeficit[];
+  deficits: PlateTypeThreshold[];
 }
 
 export function Header({ deficits }: HeaderProps) {

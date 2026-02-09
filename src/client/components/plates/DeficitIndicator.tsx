@@ -1,5 +1,5 @@
 import { Bell, BellOff } from "lucide-react";
-import { StockDeficit } from "@/types";
+import { PlateTypeThreshold } from '@/types';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 
 interface DeficitIndicatorProps {
-  deficits: StockDeficit[];
+  deficits: PlateTypeThreshold[];
 }
 
 export function DeficitIndicator({ deficits }: DeficitIndicatorProps) {
@@ -38,13 +38,13 @@ export function DeficitIndicator({ deficits }: DeficitIndicatorProps) {
             {deficits.map((deficit) => (
               <DropdownMenuItem key={deficit.plateTypeId} className="flex flex-col items-start gap-1">
                 <div className="font-medium">
-                  {deficit.plateType.format} ({deficit.plateType.manufacturer})
+                  {deficit.format} ({deficit.manufacturer})
                 </div>
                 <div className="text-sm text-muted-foreground">
-                  Остаток: {deficit.currentStock} / Порог: {deficit.threshold}
+                  Остаток: {deficit.currentStock} / Порог: {deficit.minStockThreshold}
                 </div>
                 <div className="text-xs text-destructive">
-                  Дефицит: {deficit.deficit}
+                  Дефицит: {deficit.minStockThreshold - deficit.currentStock}
                 </div>
               </DropdownMenuItem>
             ))}

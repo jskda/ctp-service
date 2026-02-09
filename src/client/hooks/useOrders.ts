@@ -6,7 +6,7 @@ export function useOrders() {
   return useQuery({
     queryKey: ['orders'],
     queryFn: async () => {
-      const response = await apiClient.get<ApiResponse<Order[]>>('/orders');
+      const response = await apiClient.get<ApiResponse<Order[]>>('/api/orders');
       return response.data;
     },
   });
@@ -14,10 +14,11 @@ export function useOrders() {
 
 export function useCreateOrder() {
   const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: (data: { clientId: string; colorMode: string }) =>
-      apiClient.post<ApiResponse<Order>>('/orders', data),
+    mutationFn: async (data: { clientId: string; colorMode: string }) => {
+      const response = await apiClient.post<ApiResponse<Order>>('/api/orders', data);
+      return response.data;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
     },
@@ -26,10 +27,11 @@ export function useCreateOrder() {
 
 export function useStartProcessing() {
   const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: (orderId: string) =>
-      apiClient.post<ApiResponse<Order>>(`/orders/${orderId}/start-processing`, {}),
+    mutationFn: async (orderId: string) => {
+      const response = await apiClient.post<ApiResponse<Order>>(`/api/orders/${orderId}/start-processing`);
+      return response.data;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
     },
@@ -38,10 +40,11 @@ export function useStartProcessing() {
 
 export function useCompleteOrder() {
   const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: (orderId: string) =>
-      apiClient.post<ApiResponse<Order>>(`/orders/${orderId}/complete`, {}),
+    mutationFn: async (orderId: string) => {
+      const response = await apiClient.post<ApiResponse<Order>>(`/api/orders/${orderId}/complete`);
+      return response.data;
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
     },

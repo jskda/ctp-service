@@ -152,6 +152,49 @@ export const plateController = {
     }
   },
 
+  // PUT /api/plates/types/:id - ДЕЙСТВИЕ: Обновить тип пластины
+  async updateType(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const plateTypeId = typeof id === 'string' ? id : id[0];
+      const validatedData = createPlateTypeSchema.partial().parse(req.body);
+      
+      // Убираем undefined значения
+      const dataToUpdate: any = {};
+      if (validatedData.format !== undefined) dataToUpdate.format = validatedData.format;
+      if (validatedData.manufacturer !== undefined) dataToUpdate.manufacturer = validatedData.manufacturer;
+      if (validatedData.otherParams !== undefined) dataToUpdate.otherParams = validatedData.otherParams;
+      
+      const plateType = await prisma.plateType.update({
+        where: { id: plateTypeId },
+        data: dataToUpdate,
+      });
+      
+      // Логируем событие
+      await prisma.eventLog.create({
+        data: {
+          eventType: 'plate.type.updated',
+          context: 'stock',
+          payload: { 
+            plateTypeId: plateType.id, 
+            updatedFields: Object.keys(dataToUpdate),
+          },
+        },
+      });
+      
+      res.json({ success: true, data: plateType });
+    } catch (error: any) {
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ success: false, error: 'Validation failed', details: error.errors });
+      }
+      if (error.code === 'P2025') {
+        return res.status(404).json({ success: false, error: 'Plate type not found' });
+      }
+      console.error('Error updating plate type:', error);
+      res.status(500).json({ success: false, error: 'Failed to update plate type' });
+    }
+  },
+
   // PUT /api/plates/types/:id/threshold - ДЕЙСТВИЕ: Задать минимальный остаток
   async updateThreshold(req: Request, res: Response) {
     try {

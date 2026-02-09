@@ -1,24 +1,24 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+// src/client/lib/api/client.ts
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 export const apiClient = {
   async get<T>(endpoint: string): Promise<T> {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`);
+    const url = `${API_BASE_URL}${endpoint}`;
+    const response = await fetch(url);
     
     if (!response.ok) {
-      let errorData;
-      try {
-        errorData = await response.json();
-      } catch {
-        errorData = { error: response.statusText };
-      }
-      throw new Error(errorData.error || `GET request failed: ${response.status}`);
+      const errorText = await response.text();
+      console.error(`API Error ${response.status} ${endpoint}:`, errorText);
+      throw new Error(`API Error ${response.status}: ${errorText}`);
     }
     
-    return response.json() as T;
+    const data = await response.json();
+    return data as T;
   },
 
   async post<T>(endpoint: string, data: any): Promise<T> {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const url = `${API_BASE_URL}${endpoint}`;
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -27,20 +27,17 @@ export const apiClient = {
     });
     
     if (!response.ok) {
-      let errorData;
-      try {
-        errorData = await response.json();
-      } catch {
-        errorData = { error: response.statusText };
-      }
-      throw new Error(errorData.error || `POST request failed: ${response.status}`);
+      const errorText = await response.text();
+      console.error(`API Error ${response.status} ${endpoint}:`, errorText);
+      throw new Error(`API Error ${response.status}: ${errorText}`);
     }
     
     return response.json() as T;
   },
 
   async put<T>(endpoint: string, data: any): Promise<T> {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const url = `${API_BASE_URL}${endpoint}`;
+    const response = await fetch(url, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -49,13 +46,9 @@ export const apiClient = {
     });
     
     if (!response.ok) {
-      let errorData;
-      try {
-        errorData = await response.json();
-      } catch {
-        errorData = { error: response.statusText };
-      }
-      throw new Error(errorData.error || `PUT request failed: ${response.status}`);
+      const errorText = await response.text();
+      console.error(`API Error ${response.status} ${endpoint}:`, errorText);
+      throw new Error(`API Error ${response.status}: ${errorText}`);
     }
     
     return response.json() as T;
