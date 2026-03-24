@@ -18,7 +18,6 @@ export function HomePage() {
         </p>
       </div>
 
-      {/* Статус дефицита согласно разделу 9 */}
       {deficits && deficits.length > 0 && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
@@ -28,7 +27,6 @@ export function HomePage() {
         </Alert>
       )}
 
-      {/* Ключевые принципы системы */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -48,17 +46,12 @@ export function HomePage() {
             </div>
             <div className="flex items-start gap-2">
               <Badge variant="outline" className="mt-0.5">3</Badge>
-              <span><strong>Контрольные пометки</strong> — MULTICOLOR: "Overprint control", BLACK: условные пометки</span>
-            </div>
-            <div className="flex items-start gap-2">
-              <Badge variant="outline" className="mt-0.5">4</Badge>
               <span><strong>Снапшоты</strong> — клиентские настройки фиксируются на момент создания заказа</span>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Основные модули */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Link to="/orders">
           <Card className="hover:border-primary transition-colors">
@@ -71,8 +64,6 @@ export function HomePage() {
             <CardContent>
               <p className="text-sm text-muted-foreground">
                 Управление заказами: NEW → PROCESS → DONE
-                <br />
-                <span className="text-xs">Автоматические контрольные пометки</span>
               </p>
             </CardContent>
           </Card>
@@ -149,19 +140,12 @@ export function HomePage() {
         </Link>
       </div>
 
-      {/* Информация о системе согласно спецификации */}
       <Card className="bg-muted/30">
         <CardHeader>
           <CardTitle>Важная информация</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-3 text-sm">
-            <div className="p-3 bg-yellow-50 border border-yellow-100 rounded-md">
-              <div className="font-medium text-yellow-800">MULTICOLOR заказы</div>
-              <div className="text-yellow-700">
-                Автоматически добавляется обязательная контрольная пометка <strong>"Overprint control"</strong>
-              </div>
-            </div>
             <div className="p-3 bg-blue-50 border border-blue-100 rounded-md">
               <div className="font-medium text-blue-800">Клиентские настройки</div>
               <div className="text-blue-700">

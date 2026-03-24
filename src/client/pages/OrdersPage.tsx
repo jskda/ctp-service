@@ -1,5 +1,4 @@
 // src/client/pages/OrdersPage.tsx
-// src/client/pages/OrdersPage.tsx
 import { useState } from "react";
 import { useOrders, useCreateOrder, useStartProcessing, useCompleteOrder, CreateOrderData } from "@/hooks/useOrders";
 import { useClients } from "@/hooks/useClients";
@@ -36,11 +35,9 @@ export function OrdersPage() {
           await completeOrderMutation.mutateAsync(orderId);
           break;
         case 'create-folder':
-          // TODO: Интеграция с файловым агентом согласно разделу 6
           console.log('Создание папки для заказа:', orderId);
           break;
         case 'open-folder':
-          // TODO: Интеграция с файловым агентом согласно разделу 6
           console.log('Открытие папки заказа:', orderId);
           break;
         default:
@@ -92,7 +89,6 @@ export function OrdersPage() {
     );
   }
 
-  // Фильтруем заказы для демонстрации разных статусов
   const newOrders = orders?.filter(o => o.status === 'NEW') || [];
   const processOrders = orders?.filter(o => o.status === 'PROCESS') || [];
   const doneOrders = orders?.filter(o => o.status === 'DONE') || [];
@@ -113,20 +109,11 @@ export function OrdersPage() {
         />
       </div>
 
-      {/* Информация о полях заказа */}
       <Alert>
         <Info className="h-4 w-4" />
         <AlertDescription>
           <strong>Поля заказа:</strong> Формат пластин, количество пластин, внутренний номер заказа клиента — 
           заполняются при создании и отображаются в карточке заказа.
-        </AlertDescription>
-      </Alert>
-
-      {/* Информация о контрольных пометках согласно спецификации */}
-      <Alert variant="default">
-        <AlertTriangle className="h-4 w-4" />
-        <AlertDescription>
-          <strong>Согласно спецификации:</strong> Для MULTICOLOR заказов автоматически добавляется контрольная пометка "Overprint control". Для BLACK заказов определённых клиентов добавляется условная пометка.
         </AlertDescription>
       </Alert>
 
@@ -136,7 +123,7 @@ export function OrdersPage() {
             <div className="text-muted-foreground mb-4">📭</div>
             <h3 className="text-lg font-medium mb-2">Заказов пока нет</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Создайте первый заказ, чтобы начать работу. Система автоматически добавит контрольные пометки согласно выбранной красочности.
+              Создайте первый заказ, чтобы начать работу.
             </p>
             <CreateOrderDialog
               clients={clients || []}
@@ -146,7 +133,6 @@ export function OrdersPage() {
         </div>
       ) : (
         <div className="space-y-8">
-          {/* Новые заказы */}
           {newOrders.length > 0 && (
             <div>
               <h2 className="text-xl font-semibold mb-4">Новые ({newOrders.length})</h2>
@@ -158,7 +144,6 @@ export function OrdersPage() {
             </div>
           )}
 
-          {/* Заказы в работе */}
           {processOrders.length > 0 && (
             <div>
               <h2 className="text-xl font-semibold mb-4">В работе ({processOrders.length})</h2>
@@ -170,7 +155,6 @@ export function OrdersPage() {
             </div>
           )}
 
-          {/* Завершенные заказы */}
           {doneOrders.length > 0 && (
             <div>
               <h2 className="text-xl font-semibold mb-4">Завершённые ({doneOrders.length})</h2>

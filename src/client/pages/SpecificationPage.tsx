@@ -12,7 +12,6 @@ export function SpecificationPage() {
         </p>
       </div>
 
-      {/* Основные принципы */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -31,10 +30,6 @@ export function SpecificationPage() {
                 <li className="flex items-start gap-2">
                   <div className="h-1.5 w-1.5 rounded-full bg-green-500 mt-1.5"></div>
                   <span>Учёт заказов (NEW → PROCESS → DONE)</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <div className="h-1.5 w-1.5 rounded-full bg-green-500 mt-1.5"></div>
-                  <span>Контрольные пометки по красочности</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <div className="h-1.5 w-1.5 rounded-full bg-green-500 mt-1.5"></div>
@@ -82,57 +77,10 @@ export function SpecificationPage() {
         </CardContent>
       </Card>
 
-      {/* Матрица красочности */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
-            Красочность заказов
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-2">ColorMode</th>
-                  <th className="text-left p-2">Статус</th>
-                  <th className="text-left p-2">Контрольные пометки</th>
-                  <th className="text-left p-2">Назначение</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b">
-                  <td className="p-2 font-medium">CMYK</td>
-                  <td className="p-2"><span className="bg-gray-100 px-2 py-1 rounded text-xs">Дефолтный</span></td>
-                  <td className="p-2">—</td>
-                  <td className="p-2">Базовый сценарий системы</td>
-                </tr>
-                <tr className="border-b">
-                  <td className="p-2 font-medium">BLACK</td>
-                  <td className="p-2"><span className="bg-gray-100 px-2 py-1 rounded text-xs">Дефолтный с расширением</span></td>
-                  <td className="p-2">Условные (по клиенту)</td>
-                  <td className="p-2">Задел под будущие расширения</td>
-                </tr>
-                <tr>
-                  <td className="p-2 font-medium">MULTICOLOR</td>
-                  <td className="p-2"><span className="bg-yellow-100 px-2 py-1 rounded text-xs">Недефолтный</span></td>
-                  <td className="p-2">
-                    <span className="bg-yellow-50 px-2 py-1 rounded text-xs font-medium">Overprint control</span>
-                  </td>
-                  <td className="p-2">Контроль внимания оператора</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Статусы заказов */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5" />
             Статусы заказов
           </CardTitle>
         </CardHeader>
@@ -169,7 +117,6 @@ export function SpecificationPage() {
         </CardContent>
       </Card>
 
-      {/* Клиентские настройки */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -226,7 +173,6 @@ export function SpecificationPage() {
         </CardContent>
       </Card>
 
-      {/* Учёт пластин */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

@@ -1,7 +1,6 @@
 // src/server/utils/validation.ts
 import { z } from 'zod';
 
-// --- Client Validation ---
 export const createClientSchema = z.object({
   name: z.string().min(1, 'Имя клиента обязательно'),
   internalCode: z.string().optional(),
@@ -13,16 +12,13 @@ export const updateClientTechNotesSchema = z.object({
   internalCode: z.string().optional(),
 });
 
-// --- Order Validation ---
 export const createOrderSchema = z.object({
   clientId: z.string().min(1, 'ID клиента обязателен'),
-  colorMode: z.enum(['CMYK', 'BLACK', 'MULTICOLOR']),
   clientOrderNum: z.string().optional(),
   plateFormat: z.string().min(1, 'Формат пластин обязателен'),
   totalPlates: z.number().int().min(1, 'Количество пластин должно быть не менее 1'),
 });
 
-// --- PlateType Validation ---
 export const createPlateTypeSchema = z.object({
   format: z.string().min(1, 'Формат обязателен'),
   manufacturer: z.string().min(1, 'Производитель обязателен'),
@@ -34,7 +30,6 @@ export const updatePlateTypeThresholdSchema = z.object({
   minStockThreshold: z.number().int().min(0),
 });
 
-// --- PlateMovement Validation - Поступление ---
 export const recordPurchaseSchema = z.object({
   plateTypeId: z.string().min(1, 'ID типа пластины обязателен'),
   quantity: z.number().int().positive('Количество должно быть положительным'),
@@ -52,7 +47,6 @@ export const recordCorrectionSchema = z.object({
   }),
 });
 
-// --- PlateMovement Validation - Использование по заказу ---
 export const recordUsageSchema = z.object({
   plateTypeId: z.string().min(1, 'ID типа пластины обязателен'),
   orderId: z.string().min(1, 'ID заказа обязателен'),
@@ -60,7 +54,6 @@ export const recordUsageSchema = z.object({
   writeOffCount: z.number().int().optional(),
 });
 
-// --- PlateMovement Validation - Брак ---
 export const recordScrapClientSchema = z.object({
   plateTypeId: z.string().min(1, 'ID типа пластины обязателен'),
   orderId: z.string().min(1, 'ID заказа обязателен'),
@@ -85,7 +78,6 @@ export const recordScrapMaterialSchema = z.object({
   reason: z.string().optional(),
 });
 
-// --- PlateMovement Validation - Производственные потери ---
 export const recordLossTestSchema = z.object({
   plateTypeId: z.string().min(1, 'ID типа пластины обязателен'),
   quantity: z.number().int().positive('Количество должно быть положительным'),

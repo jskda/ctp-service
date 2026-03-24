@@ -17,11 +17,10 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Client, ColorMode } from "@/types";
+import { Client } from "@/types";
 
 const createOrderSchema = z.object({
   clientId: z.string().min(1, "Выберите клиента"),
-  colorMode: z.enum(['CMYK', 'BLACK', 'MULTICOLOR']),
   clientOrderNum: z.string().optional(),
   plateFormat: z.string().min(1, "Укажите формат пластин"),
   totalPlates: z.coerce.number().int().min(1, "Количество пластин должно быть не менее 1"),
@@ -42,7 +41,6 @@ export function CreateOrderDialog({ clients, onCreate }: CreateOrderDialogProps)
     resolver: zodResolver(createOrderSchema),
     defaultValues: {
       clientId: "",
-      colorMode: "CMYK",
       clientOrderNum: "",
       plateFormat: "",
       totalPlates: 1,
@@ -149,32 +147,6 @@ export function CreateOrderDialog({ clients, onCreate }: CreateOrderDialogProps)
                   </FormControl>
                   <FormDescription>
                     Общее количество пластин, необходимое для заказа
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="colorMode"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Красочность *</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="CMYK">CMYK</SelectItem>
-                      <SelectItem value="BLACK">BLACK</SelectItem>
-                      <SelectItem value="MULTICOLOR">MULTICOLOR</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    Выберите режим красочности для заказа
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

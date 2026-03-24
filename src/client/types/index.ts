@@ -1,6 +1,4 @@
 // src/client/types/index.ts
-// src/client/types/index.ts
-export type ColorMode = 'CMYK' | 'BLACK' | 'MULTICOLOR';
 export type OrderStatus = 'NEW' | 'PROCESS' | 'DONE';
 export type MovementType = 'INCOMING' | 'OUTGOING';
 export type MovementReason = 
@@ -13,7 +11,7 @@ export type Responsibility = 'CLIENT' | 'PRODUCTION' | 'MATERIALS' | null;
 export interface Client {
   id: string;
   name: string;
-  internalCode?: string | null;      // Внутренний код клиента
+  internalCode?: string | null;
   techNotes?: string[] | null;
   createdAt: string;
   updatedAt: string;
@@ -25,14 +23,12 @@ export interface Order {
   id: string;
   clientId: string;
   client?: Client;
-  colorMode: ColorMode;
   status: OrderStatus;
-  clientOrderNum?: string | null;     // Внутренний номер заказа у клиента
-  plateFormat: string;                // Формат пластин
-  totalPlates: number;                // Всего пластин на заказ
+  clientOrderNum?: string | null;
+  plateFormat: string;
+  totalPlates: number;
   notesSnapshot?: {
     clientTechNotes?: string[];
-    automatedNotes?: string[];
     [key: string]: any;
   };
   createdAt: string;
@@ -61,7 +57,7 @@ export interface PlateMovement {
   responsibility?: Responsibility;
   orderId?: string;
   order?: Order;
-  writeOffCount?: number | null;      // Количество списанных пластин
+  writeOffCount?: number | null;
   createdAt: string;
 }
 
@@ -91,7 +87,6 @@ export interface ApiResponse<T = any> {
   message?: string;
 }
 
-// Статистика по заказу
 export interface OrderStats {
   totalPlates: number;
   writeOffCount: number;

@@ -1,9 +1,5 @@
 // src/client/utils/actionMatrix.ts
-/**
- * МАТРИЦА ДЕЙСТВИЙ СИСТЕМЫ
- * Согласно спецификации, раздел 11
- * Система строится вокруг допустимых действий, а не форм редактирования
- */
+import { OrderStatus } from '@/types';
 
 export interface ActionDefinition {
   id: string;
@@ -15,14 +11,13 @@ export interface ActionDefinition {
 }
 
 export const ACTION_MATRIX: ActionDefinition[] = [
-  // ==================== ДЕЙСТВИЯ С ЗАКАЗАМИ ====================
   {
     id: 'order.create',
     label: 'Создать заказ',
     context: 'system',
     conditions: ['—'],
     eventType: 'OrderCreated',
-    description: 'Создание заказа с автоматическим снапшотом клиентских настроек и контрольных пометок по красочности'
+    description: 'Создание заказа с автоматическим снапшотом клиентских настроек'
   },
   {
     id: 'order.start-processing',
@@ -56,9 +51,6 @@ export const ACTION_MATRIX: ActionDefinition[] = [
     eventType: '—',
     description: 'Открытие папки заказа в файловой системе (side-effect)'
   },
-
-  // ==================== ДЕЙСТВИЯ УЧЁТА ПЛАСТИН ====================
-  // Поступление
   {
     id: 'plate.purchase',
     label: 'Зафиксировать закупку пластин',
@@ -80,11 +72,9 @@ export const ACTION_MATRIX: ActionDefinition[] = [
     label: 'Корректировка прихода',
     context: 'stock',
     conditions: ['—'],
-    eventType: 'PlateMovement: INCOMING / CORRECTION',
+    eventType: 'PlateMovement: INCOMING/OUTGOING / CORRECTION',
     description: 'Корректировка учтенных остатков'
   },
-
-  // Использование по заказу
   {
     id: 'plate.usage',
     label: 'Списать пластины по заказу',
@@ -93,8 +83,6 @@ export const ACTION_MATRIX: ActionDefinition[] = [
     eventType: 'PlateMovement: OUTGOING / NORMAL_USAGE',
     description: 'Списание пластин на выполнение заказа, ответственность: производство'
   },
-
-  // Брак
   {
     id: 'plate.scrap.client',
     label: 'Зафиксировать брак (клиент)',
@@ -119,8 +107,6 @@ export const ACTION_MATRIX: ActionDefinition[] = [
     eventType: 'PlateMovement: OUTGOING / SCRAP_MATERIAL',
     description: 'Списание бракованных пластин по вине материалов/поставщика'
   },
-
-  // Производственные потери
   {
     id: 'plate.loss.test',
     label: 'Зафиксировать тест',
@@ -145,8 +131,6 @@ export const ACTION_MATRIX: ActionDefinition[] = [
     eventType: 'PlateMovement: OUTGOING / LOSS_EQUIPMENT',
     description: 'Списание пластин из-за сбоя оборудования'
   },
-
-  // ==================== ДЕЙСТВИЯ СПРАВОЧНИКОВ ====================
   {
     id: 'plate-type.create',
     label: 'Создать тип пластины',
@@ -181,9 +165,6 @@ export const ACTION_MATRIX: ActionDefinition[] = [
   }
 ];
 
-/**
- * Проверяет, доступно ли действие в текущем контексте
- */
 export function isActionAvailable(
   actionId: string, 
   context: { orderStatus?: OrderStatus, hasFolder?: boolean }
@@ -191,7 +172,6 @@ export function isActionAvailable(
   const action = ACTION_MATRIX.find(a => a.id === actionId);
   if (!action) return false;
 
-  // Проверяем условия для действий с заказами
   if (action.context === 'order' && context.orderStatus) {
     switch (actionId) {
       case 'order.start-processing':
@@ -205,7 +185,6 @@ export function isActionAvailable(
     }
   }
 
-  // Проверяем условия для действий с папками
   if (actionId === 'order.folder.create') {
     return !context.hasFolder;
   }
@@ -216,9 +195,6 @@ export function isActionAvailable(
   return true;
 }
 
-/**
- * Возвращает действия, доступные для заказа в текущем статусе
- */
 export function getAvailableOrderActions(orderStatus: OrderStatus, hasFolder: boolean): ActionDefinition[] {
   return ACTION_MATRIX.filter(action => {
     if (action.context !== 'order') return false;

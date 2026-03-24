@@ -1,9 +1,7 @@
 // src/client/components/orders/OrderCard.tsx
-// src/client/components/orders/OrderCard.tsx
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Order, ColorMode } from "@/types";
+import { Order } from "@/types";
 import { OrderStatusBadge } from "./OrderStatusBadge";
-import { ColorModeBadge } from "./ColorModeBadge";
 import { Button } from "@/components/ui/button";
 import { FileText, FolderOpen, AlertTriangle, CheckCircle, Package, Hash, Ruler } from "lucide-react";
 import { useState } from "react";
@@ -30,7 +28,6 @@ export function OrderCard({ order, onAction, hasFolder }: OrderCardProps) {
   const renderActions = () => {
     const actions = [];
 
-    // Действия согласно матрице действий (раздел 11)
     if (order.status === 'NEW') {
       actions.push(
         <Button
@@ -58,7 +55,6 @@ export function OrderCard({ order, onAction, hasFolder }: OrderCardProps) {
       );
     }
 
-    // Действия с папкой согласно разделу 6
     actions.push(
       <Button
         key="folder"
@@ -84,15 +80,8 @@ export function OrderCard({ order, onAction, hasFolder }: OrderCardProps) {
     return actions;
   };
 
-  // Извлекаем данные из notesSnapshot согласно спецификации
-  const hasAutoMarks = order.notesSnapshot?.automatedNotes && order.notesSnapshot.automatedNotes.length > 0;
   const hasClientNotes = order.notesSnapshot?.clientTechNotes && order.notesSnapshot.clientTechNotes.length > 0;
 
-  // Проверяем MULTICOLOR заказ для особого отображения
-  const isMulticolor = order.colorMode === 'MULTICOLOR';
-  const isBlack = order.colorMode === 'BLACK';
-
-  // Расчет списанных пластин (брак)
   const writeOffCount = order.plateMovements?.reduce((total, movement) => {
     if (movement.reason?.startsWith('SCRAP_') && movement.writeOffCount) {
       return total + movement.writeOffCount;
@@ -103,7 +92,7 @@ export function OrderCard({ order, onAction, hasFolder }: OrderCardProps) {
   const remainingPlates = order.totalPlates - writeOffCount;
 
   return (
-    <Card className={`hover:shadow-lg transition-shadow ${isMulticolor ? 'border-yellow-200 border-2' : ''}`}>
+    <Card>
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start">
           <div className="space-y-1">
@@ -115,17 +104,6 @@ export function OrderCard({ order, onAction, hasFolder }: OrderCardProps) {
                   {order.clientOrderNum}
                 </Badge>
               )}
-              {isMulticolor && (
-                <Badge variant="outline" className="text-yellow-600 border-yellow-300">
-                  <AlertTriangle className="h-3 w-3 mr-1" />
-                  MULTICOLOR
-                </Badge>
-              )}
-              {isBlack && (
-                <Badge variant="secondary" className="text-gray-600">
-                  BLACK
-                </Badge>
-              )}
             </CardTitle>
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">
@@ -133,7 +111,6 @@ export function OrderCard({ order, onAction, hasFolder }: OrderCardProps) {
                 {order.client?.internalCode && ` (${order.client.internalCode})`}
               </span>
               <OrderStatusBadge status={order.status} />
-              <ColorModeBadge colorMode={order.colorMode} />
             </div>
           </div>
           <div className="flex gap-2">
@@ -143,8 +120,7 @@ export function OrderCard({ order, onAction, hasFolder }: OrderCardProps) {
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {/* Информация о пластинах */}
-          <div className="grid grid-cols-3 gap-4 p-3 bg-muted/30 rounded-md">
+          <div className="grid grid-cols-2 gap-4 p-3 bg-muted/30 rounded-md">
             <div className="flex items-center gap-2">
               <Ruler className="h-4 w-4 text-muted-foreground" />
               <div>
@@ -159,52 +135,17 @@ export function OrderCard({ order, onAction, hasFolder }: OrderCardProps) {
                 <div className="font-medium">{order.totalPlates}</div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-              <div>
-                <div className="text-xs text-muted-foreground">Списано / Осталось</div>
-                <div className={`font-medium ${writeOffCount > 0 ? 'text-destructive' : ''}`}>
-                  {writeOffCount} / {remainingPlates}
-                </div>
+          </div>
+          <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-md">
+            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <div className="text-xs text-muted-foreground">Списано / Осталось</div>
+              <div className={`font-medium ${writeOffCount > 0 ? 'text-destructive' : ''}`}>
+                {writeOffCount} / {remainingPlates}
               </div>
             </div>
           </div>
 
-          {/* Обязательная контрольная пометка для MULTICOLOR (раздел 3.5) */}
-          {isMulticolor && (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
-              <div className="flex items-start gap-2">
-                <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-                <div>
-                  <div className="font-medium text-yellow-800">Контрольная пометка:</div>
-                  <div className="text-sm text-yellow-700 font-semibold">
-                    Overprint control
-                  </div>
-                  <div className="text-xs text-yellow-600 mt-1">
-                    Согласно спецификации: обязательно для контроля внимания оператора
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Автоматические пометки (раздел 5.4) */}
-          {hasAutoMarks && !isMulticolor && (
-            <div className="space-y-2">
-              <div className="text-xs font-medium text-muted-foreground">
-                Автоматические контрольные пометки:
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {order.notesSnapshot.automatedNotes.map((mark: string, idx: number) => (
-                  <Badge key={idx} variant="outline" className="text-sm font-normal">
-                    ⚠️ {mark}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Клиентские технологические настройки (раздел 5) */}
           {hasClientNotes && (
             <div className="space-y-2">
               <div className="text-xs font-medium text-muted-foreground">
@@ -226,7 +167,6 @@ export function OrderCard({ order, onAction, hasFolder }: OrderCardProps) {
             </div>
           )}
 
-          {/* Информация о времени */}
           <div className="text-xs text-muted-foreground flex justify-between pt-2 border-t">
             <span>Создан: {new Date(order.createdAt).toLocaleString('ru-RU')}</span>
             {order.updatedAt !== order.createdAt && (

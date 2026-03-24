@@ -1,3 +1,4 @@
+// src/client/components/orders/OrderStatusBadge.tsx
 import { Badge } from "@/components/ui/badge";
 import { OrderStatus } from "@/types";
 

@@ -1,3 +1,4 @@
+// src/client/components/settings/SystemSettings.tsx
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -12,7 +13,6 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -22,7 +22,6 @@ import { TabsContent } from '@/components/ui/tabs';
 const systemSettingsSchema = z.object({
   companyName: z.string().min(1, 'Название компании обязательно'),
   currency: z.string().min(1, 'Валюта обязательна'),
-  defaultColorMode: z.enum(['CMYK', 'BLACK', 'MULTICOLOR']),
   autoArchiveDays: z.coerce.number().min(1, 'Минимум 1 день').max(365, 'Максимум 365 дней'),
   enableNotifications: z.boolean(),
 });
@@ -38,7 +37,6 @@ export function SystemSettings() {
     values: settings || {
       companyName: '',
       currency: 'RUB',
-      defaultColorMode: 'CMYK',
       autoArchiveDays: 30,
       enableNotifications: true,
     },
@@ -108,47 +106,11 @@ export function SystemSettings() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Валюта *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Выберите валюту" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="RUB">₽ Рубль</SelectItem>
-                        <SelectItem value="USD">$ Доллар</SelectItem>
-                        <SelectItem value="EUR">€ Евро</SelectItem>
-                        <SelectItem value="CNY">¥ Юань</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <Input placeholder="RUB" {...field} />
+                    </FormControl>
                     <FormDescription>
                       Валюта для финансовых операций
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="defaultColorMode"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Режим по умолчанию</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="CMYK">CMYK (4-красочный)</SelectItem>
-                        <SelectItem value="BLACK">BLACK (1-красочный)</SelectItem>
-                        <SelectItem value="MULTICOLOR">MULTICOLOR (многокрасочный)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormDescription>
-                      Режим красочности по умолчанию для новых заказов
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

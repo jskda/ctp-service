@@ -5,7 +5,6 @@ import { Order, ApiResponse } from '@/types';
 
 export interface CreateOrderData {
   clientId: string;
-  colorMode: string;
   clientOrderNum?: string;
   plateFormat: string;
   totalPlates: number;
@@ -60,7 +59,6 @@ export function useCompleteOrder() {
   });
 }
 
-// Действие для списания пластин (брак)
 export function useRecordScrap() {
   const queryClient = useQueryClient();
   return useMutation({

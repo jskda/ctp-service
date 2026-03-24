@@ -1,19 +1,16 @@
 // src/server/controllers/orderController.ts
-// src/server/controllers/orderController.ts
 import type { Request, Response } from 'express';
 import { prisma } from '../app';
 import { createOrderSchema } from '../utils/validation';
 
 export const orderController = {
-  // GET /api/orders - список всех заказов
   async getAll(req: Request, res: Response) {
     try {
-      const { status, clientId, colorMode } = req.query;
+      const { status, clientId } = req.query;
       
       const where: any = {};
       if (status) where.status = status;
       if (clientId) where.clientId = clientId;
-      if (colorMode) where.colorMode = colorMode;
 
       const orders = await prisma.order.findMany({
         where,
@@ -46,7 +43,6 @@ export const orderController = {
     }
   },
 
-  // GET /api/orders/:id - получить заказ по ID
   async getById(req: Request, res: Response) {
     try {
       const { id } = req.params;
@@ -75,12 +71,10 @@ export const orderController = {
     }
   },
 
-  // POST /api/orders - ДЕЙСТВИЕ: Создать заказ (согласно спецификации)
   async create(req: Request, res: Response) {
     try {
       const validatedData = createOrderSchema.parse(req.body);
       
-      // Проверяем существование клиента
       const client = await prisma.client.findUnique({
         where: { id: validatedData.clientId },
       });
@@ -89,38 +83,16 @@ export const orderController = {
         return res.status(404).json({ success: false, error: 'Client not found' });
       }
 
-      // Создаем снапшот согласно спецификации (раздел 5.1.3)
       const notesSnapshot: any = {};
       
-      // 1. Клиентские технологические настройки (раздел 5)
       if (client.techNotes && Array.isArray(client.techNotes)) {
         notesSnapshot.clientTechNotes = client.techNotes;
       }
 
-      // 2. Автоматические контрольные пометки по красочности (раздел 3.5)
-      const automatedNotes: string[] = [];
-      
-      // MULTICOLOR - обязательная контрольная пометка (раздел 3.5)
-      if (validatedData.colorMode === 'MULTICOLOR') {
-        automatedNotes.push('Overprint control');
-      }
-      
-      // BLACK - условная пометка для определенных клиентов (раздел 5.4)
-      // В реальной системе это будет проверяться по конкретному клиенту
-      if (validatedData.colorMode === 'BLACK' && client.id === 'SPECIAL_CLIENT_ID') {
-        automatedNotes.push('Необходимо компенсировать растискивание (проверить параметры RIP)');
-      }
-      
-      if (automatedNotes.length > 0) {
-        notesSnapshot.automatedNotes = automatedNotes;
-      }
-
-      // Создаем заказ с новыми полями
       const order = await prisma.order.create({
         data: {
           clientId: validatedData.clientId,
-          colorMode: validatedData.colorMode,
-          status: 'NEW', // Автоматически согласно спецификации 3.2
+          status: 'NEW',
           clientOrderNum: validatedData.clientOrderNum || null,
           plateFormat: validatedData.plateFormat,
           totalPlates: validatedData.totalPlates,
@@ -128,7 +100,6 @@ export const orderController = {
         },
       });
 
-      // Логируем событие согласно спецификации (раздел 3.6)
       await prisma.eventLog.create({
         data: {
           eventType: 'order.created',
@@ -136,7 +107,6 @@ export const orderController = {
           payload: {
             orderId: order.id,
             clientId: order.clientId,
-            colorMode: order.colorMode,
             status: order.status,
             clientOrderNum: order.clientOrderNum,
             plateFormat: order.plateFormat,
@@ -150,7 +120,7 @@ export const orderController = {
       res.status(201).json({ 
         success: true, 
         data: order,
-        message: 'Заказ создан с применением контрольных пометок согласно спецификации'
+        message: 'Заказ создан'
       });
     } catch (error: any) {
       if (error.name === 'ZodError') {
@@ -165,7 +135,6 @@ export const orderController = {
     }
   },
 
-  // POST /api/orders/:id/start-processing - ДЕЙСТВИЕ: Перевести заказ в работу
   async startProcessing(req: Request, res: Response) {
     try {
       const { id } = req.params;
@@ -179,7 +148,6 @@ export const orderController = {
         return res.status(404).json({ success: false, error: 'Order not found' });
       }
 
-      // Проверяем статус: только из NEW можно перейти в PROCESS (раздел 3.2)
       if (currentOrder.status !== 'NEW') {
         return res.status(400).json({
           success: false,
@@ -187,7 +155,6 @@ export const orderController = {
         });
       }
 
-      // Логируем событие изменения статуса
       await prisma.eventLog.create({
         data: {
           eventType: 'order.status.changed',
@@ -209,7 +176,7 @@ export const orderController = {
       res.json({ 
         success: true, 
         data: order,
-        message: 'Заказ переведен в работу. Проверьте контрольные пометки.'
+        message: 'Заказ переведен в работу'
       });
     } catch (error: any) {
       if (error.code === 'P2025') {
@@ -220,7 +187,6 @@ export const orderController = {
     }
   },
 
-  // POST /api/orders/:id/complete - ДЕЙСТВИЕ: Завершить заказ
   async complete(req: Request, res: Response) {
     try {
       const { id } = req.params;
