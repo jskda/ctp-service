@@ -1,4 +1,5 @@
 // src/server/controllers/orderController.ts
+// src/server/controllers/orderController.ts
 import type { Request, Response } from 'express';
 import { prisma } from '../app';
 import { createOrderSchema } from '../utils/validation';
@@ -21,6 +22,7 @@ export const orderController = {
             select: {
               id: true,
               name: true,
+              internalCode: true,
               techNotes: true,
             },
           },
@@ -113,12 +115,15 @@ export const orderController = {
         notesSnapshot.automatedNotes = automatedNotes;
       }
 
-      // Создаем заказ со снапшотом
+      // Создаем заказ с новыми полями
       const order = await prisma.order.create({
         data: {
           clientId: validatedData.clientId,
           colorMode: validatedData.colorMode,
           status: 'NEW', // Автоматически согласно спецификации 3.2
+          clientOrderNum: validatedData.clientOrderNum || null,
+          plateFormat: validatedData.plateFormat,
+          totalPlates: validatedData.totalPlates,
           notesSnapshot: Object.keys(notesSnapshot).length > 0 ? notesSnapshot : undefined,
         },
       });
@@ -133,6 +138,9 @@ export const orderController = {
             clientId: order.clientId,
             colorMode: order.colorMode,
             status: order.status,
+            clientOrderNum: order.clientOrderNum,
+            plateFormat: order.plateFormat,
+            totalPlates: order.totalPlates,
             createdAt: order.createdAt,
             notesSnapshot: order.notesSnapshot,
           },

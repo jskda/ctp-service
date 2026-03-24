@@ -1,6 +1,15 @@
+// src/client/hooks/useOrders.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import { Order, ApiResponse } from '@/types';
+
+export interface CreateOrderData {
+  clientId: string;
+  colorMode: string;
+  clientOrderNum?: string;
+  plateFormat: string;
+  totalPlates: number;
+}
 
 export function useOrders() {
   return useQuery({
@@ -15,7 +24,7 @@ export function useOrders() {
 export function useCreateOrder() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: { clientId: string; colorMode: string }) => {
+    mutationFn: async (data: CreateOrderData) => {
       const response = await apiClient.post<ApiResponse<Order>>('/api/orders', data);
       return response.data;
     },
@@ -47,6 +56,33 @@ export function useCompleteOrder() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
+    },
+  });
+}
+
+// Действие для списания пластин (брак)
+export function useRecordScrap() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: {
+      plateTypeId: string;
+      orderId: string;
+      quantity: number;
+      reason: 'SCRAP_CLIENT' | 'SCRAP_PRODUCTION' | 'SCRAP_MATERIAL';
+      writeOffCount?: number;
+    }) => {
+      const endpoint = `/api/plates/movements/scrap/${data.reason === 'SCRAP_CLIENT' ? 'client' : data.reason === 'SCRAP_PRODUCTION' ? 'production' : 'material'}`;
+      const response = await apiClient.post<ApiResponse>(endpoint, {
+        plateTypeId: data.plateTypeId,
+        orderId: data.orderId,
+        quantity: data.quantity,
+        writeOffCount: data.writeOffCount,
+      });
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['plates'] });
     },
   });
 }

@@ -1,3 +1,4 @@
+// src/client/components/orders/CreateOrderDialog.tsx
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -21,6 +22,9 @@ import { Client, ColorMode } from "@/types";
 const createOrderSchema = z.object({
   clientId: z.string().min(1, "Выберите клиента"),
   colorMode: z.enum(['CMYK', 'BLACK', 'MULTICOLOR']),
+  clientOrderNum: z.string().optional(),
+  plateFormat: z.string().min(1, "Укажите формат пластин"),
+  totalPlates: z.coerce.number().int().min(1, "Количество пластин должно быть не менее 1"),
 });
 
 type CreateOrderForm = z.infer<typeof createOrderSchema>;
@@ -39,10 +43,13 @@ export function CreateOrderDialog({ clients, onCreate }: CreateOrderDialogProps)
     defaultValues: {
       clientId: "",
       colorMode: "CMYK",
+      clientOrderNum: "",
+      plateFormat: "",
+      totalPlates: 1,
     },
   });
 
-  const handleSubmit = async (data: CreateOrderForm) => {  // ← ИСПРАВЛЕНО: добавлен параметр data
+  const handleSubmit = async (data: CreateOrderForm) => {
     setIsLoading(true);
     try {
       await onCreate(data);
@@ -63,7 +70,7 @@ export function CreateOrderDialog({ clients, onCreate }: CreateOrderDialogProps)
           Создать заказ
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Создать новый заказ</DialogTitle>
           <DialogDescription>
@@ -87,7 +94,7 @@ export function CreateOrderDialog({ clients, onCreate }: CreateOrderDialogProps)
                     <SelectContent>
                       {clients.map((client) => (
                         <SelectItem key={client.id} value={client.id}>
-                          {client.name}
+                          {client.name} {client.internalCode ? `(${client.internalCode})` : ''}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -96,6 +103,58 @@ export function CreateOrderDialog({ clients, onCreate }: CreateOrderDialogProps)
                 </FormItem>
               )}
             />
+
+            <FormField
+              control={form.control}
+              name="clientOrderNum"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Номер заказа клиента</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Введите внутренний номер заказа клиента" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    Внутренний номер заказа в системе клиента
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="plateFormat"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Формат пластин *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Например: 1030×800" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    Формат пластин, используемых для этого заказа
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="totalPlates"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Всего пластин *</FormLabel>
+                  <FormControl>
+                    <Input type="number" min="1" placeholder="Количество пластин на заказ" {...field} />
+                  </FormControl>
+                  <FormDescription>
+                    Общее количество пластин, необходимое для заказа
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
             <FormField
               control={form.control}
               name="colorMode"
@@ -121,6 +180,7 @@ export function CreateOrderDialog({ clients, onCreate }: CreateOrderDialogProps)
                 </FormItem>
               )}
             />
+
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? "Создание..." : "Создать заказ"}
             </Button>

@@ -1,3 +1,4 @@
+// prisma/schema.prisma
 // schema.prisma
 
 generator client {
@@ -7,37 +8,55 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
+
 model Client {
-  id        String   @id @default(cuid())
-  name      String
-  techNotes Json?
-  orders    Order[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String   @id @default(cuid())
+  name             String
+  techNotes        Json?
+  internalCode     String?  // Внутренний код клиента (если есть)
+  isActive         Boolean  @default(true)
+  archivedAt       DateTime?
+  orders           Order[]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([internalCode])
 }
 
 model PlateType {
-  id                  String   @id @default(cuid())
-  format              String
-  manufacturer        String
-  otherParams         Json?
-  minStockThreshold   Int      @default(0)
-  movements           PlateMovement[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                String          @id @default(cuid())
+  format            String
+  manufacturer      String
+  otherParams       Json?
+  minStockThreshold Int             @default(0)
+  isActive          Boolean         @default(true)
+  archivedAt        DateTime?
+  movements         PlateMovement[]
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([isActive])
 }
 
 model Order {
-  id            String   @id @default(cuid())
-  clientId      String
-  client        Client   @relation(fields: [clientId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  colorMode     ColorMode
-  status        OrderStatus @default(NEW)
-  notesSnapshot Json?
-  plateMovements PlateMovement[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String        @id @default(cuid())
+  clientId        String
+  client          Client        @relation(fields: [clientId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  colorMode       ColorMode
+  status          OrderStatus   @default(NEW)
+  clientOrderNum  String?       // Внутренний номер заказа у клиента
+  plateFormat     String        @default("") // Формат пластин для заказа
+  totalPlates     Int           @default(0)  // Всего пластин на заказ
+  notesSnapshot   Json?
+  plateMovements  PlateMovement[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([clientOrderNum])
+  @@index([status])
 }
 
 model PlateMovement {
@@ -50,7 +69,8 @@ model PlateMovement {
   responsibility Responsibility?
   orderId        String?
   order          Order?         @relation(fields: [orderId], references: [id], onDelete: SetNull, onUpdate: Cascade)
-  createdAt DateTime @default(now())
+  writeOffCount  Int?           // Количество списанных пластин (брак) для учета в заказе
+  createdAt      DateTime       @default(now())
   @@index([plateTypeId])
   @@index([orderId])
 }

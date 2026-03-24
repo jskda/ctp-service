@@ -1,12 +1,13 @@
 // src/client/pages/OrdersPage.tsx
+// src/client/pages/OrdersPage.tsx
 import { useState } from "react";
-import { useOrders, useCreateOrder, useStartProcessing, useCompleteOrder } from "@/hooks/useOrders";
+import { useOrders, useCreateOrder, useStartProcessing, useCompleteOrder, CreateOrderData } from "@/hooks/useOrders";
 import { useClients } from "@/hooks/useClients";
 import { useDeficit } from "@/hooks/useDeficit";
 import { OrderList } from "@/components/orders/OrderList";
 import { CreateOrderDialog } from "@/components/orders/CreateOrderDialog";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, AlertTriangle } from "lucide-react";
+import { RefreshCw, AlertTriangle, Info } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function OrdersPage() {
@@ -50,7 +51,7 @@ export function OrdersPage() {
     }
   };
 
-  const handleCreateOrder = async (data: { clientId: string; colorMode: string }) => {
+  const handleCreateOrder = async (data: CreateOrderData) => {
     try {
       await createOrderMutation.mutateAsync(data);
     } catch (error) {
@@ -112,8 +113,17 @@ export function OrdersPage() {
         />
       </div>
 
-      {/* Информация о контрольных пометках согласно спецификации */}
+      {/* Информация о полях заказа */}
       <Alert>
+        <Info className="h-4 w-4" />
+        <AlertDescription>
+          <strong>Поля заказа:</strong> Формат пластин, количество пластин, внутренний номер заказа клиента — 
+          заполняются при создании и отображаются в карточке заказа.
+        </AlertDescription>
+      </Alert>
+
+      {/* Информация о контрольных пометках согласно спецификации */}
+      <Alert variant="default">
         <AlertTriangle className="h-4 w-4" />
         <AlertDescription>
           <strong>Согласно спецификации:</strong> Для MULTICOLOR заказов автоматически добавляется контрольная пометка "Overprint control". Для BLACK заказов определённых клиентов добавляется условная пометка.

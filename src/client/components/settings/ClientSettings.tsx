@@ -1,5 +1,6 @@
+// src/client/components/settings/ClientSettings.tsx
 import { useState } from 'react';
-import { Edit, Save, X, FileText } from 'lucide-react';
+import { Edit, Save, X, FileText, Hash } from 'lucide-react';
 import { useClients } from '@/hooks/useClients';
 import { useUpdateClient } from '@/hooks/useClients';
 import { Button } from '@/components/ui/button';
@@ -15,13 +16,15 @@ export function ClientSettings() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
+    internalCode: '',
     techNotes: '',
   });
 
-  const handleEdit = (clientId: string, clientName: string, techNotes?: string[]) => {
+  const handleEdit = (clientId: string, clientName: string, internalCode?: string | null, techNotes?: string[]) => {
     setEditingId(clientId);
     setFormData({
       name: clientName,
+      internalCode: internalCode || '',
       techNotes: techNotes ? techNotes.join('\n') : '',
     });
   };
@@ -38,6 +41,7 @@ export function ClientSettings() {
         id: clientId,
         data: {
           name: formData.name,
+          internalCode: formData.internalCode || null,
           techNotes: techNotes.length > 0 ? techNotes : undefined,
         },
       });
@@ -50,7 +54,7 @@ export function ClientSettings() {
 
   const handleCancel = () => {
     setEditingId(null);
-    setFormData({ name: '', techNotes: '' });
+    setFormData({ name: '', internalCode: '', techNotes: '' });
   };
 
   if (isLoading) {
@@ -74,7 +78,7 @@ export function ClientSettings() {
             Настройки клиентов
           </CardTitle>
           <CardDescription>
-            Управление данными клиентов и техническими заметками
+            Управление данными клиентов, внутренними кодами и техническими заметками
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -83,6 +87,7 @@ export function ClientSettings() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Клиент</TableHead>
+                  <TableHead>Внутренний код</TableHead>
                   <TableHead>Технические заметки</TableHead>
                   <TableHead className="text-right">Действия</TableHead>
                 </TableRow>
@@ -101,6 +106,23 @@ export function ClientSettings() {
                           />
                         ) : (
                           client.name
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {isEditing ? (
+                          <Input
+                            value={formData.internalCode}
+                            onChange={(e) => setFormData({ ...formData, internalCode: e.target.value })}
+                            placeholder="Внутренний код клиента"
+                            className="w-32"
+                          />
+                        ) : client.internalCode ? (
+                          <span className="inline-flex items-center gap-1 text-sm font-mono">
+                            <Hash className="h-3 w-3" />
+                            {client.internalCode}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
                         )}
                       </TableCell>
                       <TableCell>
@@ -146,7 +168,7 @@ export function ClientSettings() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleEdit(client.id, client.name, client.techNotes)}
+                            onClick={() => handleEdit(client.id, client.name, client.internalCode, client.techNotes)}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>

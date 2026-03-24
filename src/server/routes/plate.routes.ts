@@ -10,6 +10,8 @@ router.get('/types/:id', plateController.getTypeById);
 router.post('/types', plateController.createType);
 router.put('/types/:id', plateController.updateType);
 router.put('/types/:id/threshold', plateController.updateThreshold);
+router.get('/types/active', plateController.getActiveTypes);  // новый
+router.delete('/types/:id', plateController.archiveType);     // новый
 
 // Plate movements - incoming
 router.post('/movements/purchase', plateController.recordPurchase);

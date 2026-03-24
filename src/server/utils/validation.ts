@@ -1,26 +1,32 @@
+// src/server/utils/validation.ts
 import { z } from 'zod';
 
 // --- Client Validation ---
 export const createClientSchema = z.object({
   name: z.string().min(1, 'Имя клиента обязательно'),
+  internalCode: z.string().optional(),
   techNotes: z.array(z.string()).optional(),
 });
 
 export const updateClientTechNotesSchema = z.object({
   techNotes: z.array(z.string()).optional(),
+  internalCode: z.string().optional(),
 });
 
 // --- Order Validation ---
 export const createOrderSchema = z.object({
   clientId: z.string().min(1, 'ID клиента обязателен'),
   colorMode: z.enum(['CMYK', 'BLACK', 'MULTICOLOR']),
+  clientOrderNum: z.string().optional(),
+  plateFormat: z.string().min(1, 'Формат пластин обязателен'),
+  totalPlates: z.number().int().min(1, 'Количество пластин должно быть не менее 1'),
 });
 
 // --- PlateType Validation ---
 export const createPlateTypeSchema = z.object({
   format: z.string().min(1, 'Формат обязателен'),
   manufacturer: z.string().min(1, 'Производитель обязателен'),
-  otherParams: z.any().optional(), // Любой JSON-объект
+  otherParams: z.any().optional(),
   minStockThreshold: z.number().int().min(0).default(0),
 });
 
@@ -51,6 +57,7 @@ export const recordUsageSchema = z.object({
   plateTypeId: z.string().min(1, 'ID типа пластины обязателен'),
   orderId: z.string().min(1, 'ID заказа обязателен'),
   quantity: z.number().int().positive('Количество должно быть положительным'),
+  writeOffCount: z.number().int().optional(),
 });
 
 // --- PlateMovement Validation - Брак ---
@@ -58,20 +65,23 @@ export const recordScrapClientSchema = z.object({
   plateTypeId: z.string().min(1, 'ID типа пластины обязателен'),
   orderId: z.string().min(1, 'ID заказа обязателен'),
   quantity: z.number().int().positive('Количество должно быть положительным'),
-  reason: z.string().optional(), // Дополнительное описание причины
+  writeOffCount: z.number().int().optional(),
+  reason: z.string().optional(),
 });
 
 export const recordScrapProductionSchema = z.object({
   plateTypeId: z.string().min(1, 'ID типа пластины обязателен'),
   orderId: z.string().min(1, 'ID заказа обязателен'),
   quantity: z.number().int().positive('Количество должно быть положительным'),
+  writeOffCount: z.number().int().optional(),
   reason: z.string().optional(),
 });
 
 export const recordScrapMaterialSchema = z.object({
   plateTypeId: z.string().min(1, 'ID типа пластины обязателен'),
-  orderId: z.string().optional(), // Опционально для брака материалов без заказа
+  orderId: z.string().optional(),
   quantity: z.number().int().positive('Количество должно быть положительным'),
+  writeOffCount: z.number().int().optional(),
   reason: z.string().optional(),
 });
 
@@ -89,5 +99,5 @@ export const recordLossCalibrationSchema = z.object({
 export const recordLossEquipmentSchema = z.object({
   plateTypeId: z.string().min(1, 'ID типа пластины обязателен'),
   quantity: z.number().int().positive('Количество должно быть положительным'),
-  description: z.string().optional(), // Описание сбоя
+  description: z.string().optional(),
 });

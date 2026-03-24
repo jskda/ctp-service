@@ -1,10 +1,11 @@
 // src/client/components/orders/OrderCard.tsx
+// src/client/components/orders/OrderCard.tsx
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Order, ColorMode } from "@/types";
 import { OrderStatusBadge } from "./OrderStatusBadge";
 import { ColorModeBadge } from "./ColorModeBadge";
 import { Button } from "@/components/ui/button";
-import { FileText, FolderOpen, AlertTriangle, CheckCircle } from "lucide-react";
+import { FileText, FolderOpen, AlertTriangle, CheckCircle, Package, Hash, Ruler } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 
@@ -91,6 +92,16 @@ export function OrderCard({ order, onAction, hasFolder }: OrderCardProps) {
   const isMulticolor = order.colorMode === 'MULTICOLOR';
   const isBlack = order.colorMode === 'BLACK';
 
+  // Расчет списанных пластин (брак)
+  const writeOffCount = order.plateMovements?.reduce((total, movement) => {
+    if (movement.reason?.startsWith('SCRAP_') && movement.writeOffCount) {
+      return total + movement.writeOffCount;
+    }
+    return total;
+  }, 0) || 0;
+
+  const remainingPlates = order.totalPlates - writeOffCount;
+
   return (
     <Card className={`hover:shadow-lg transition-shadow ${isMulticolor ? 'border-yellow-200 border-2' : ''}`}>
       <CardHeader className="pb-3">
@@ -98,6 +109,12 @@ export function OrderCard({ order, onAction, hasFolder }: OrderCardProps) {
           <div className="space-y-1">
             <CardTitle className="text-lg flex items-center gap-2">
               Заказ #{order.id.slice(0, 8)}
+              {order.clientOrderNum && (
+                <Badge variant="outline" className="text-xs font-normal">
+                  <Hash className="h-3 w-3 mr-1" />
+                  {order.clientOrderNum}
+                </Badge>
+              )}
               {isMulticolor && (
                 <Badge variant="outline" className="text-yellow-600 border-yellow-300">
                   <AlertTriangle className="h-3 w-3 mr-1" />
@@ -113,6 +130,7 @@ export function OrderCard({ order, onAction, hasFolder }: OrderCardProps) {
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">
                 {order.client?.name || 'Клиент не указан'}
+                {order.client?.internalCode && ` (${order.client.internalCode})`}
               </span>
               <OrderStatusBadge status={order.status} />
               <ColorModeBadge colorMode={order.colorMode} />
@@ -125,6 +143,33 @@ export function OrderCard({ order, onAction, hasFolder }: OrderCardProps) {
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
+          {/* Информация о пластинах */}
+          <div className="grid grid-cols-3 gap-4 p-3 bg-muted/30 rounded-md">
+            <div className="flex items-center gap-2">
+              <Ruler className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <div className="text-xs text-muted-foreground">Формат</div>
+                <div className="font-medium">{order.plateFormat}</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Package className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <div className="text-xs text-muted-foreground">Всего пластин</div>
+                <div className="font-medium">{order.totalPlates}</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <div className="text-xs text-muted-foreground">Списано / Осталось</div>
+                <div className={`font-medium ${writeOffCount > 0 ? 'text-destructive' : ''}`}>
+                  {writeOffCount} / {remainingPlates}
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Обязательная контрольная пометка для MULTICOLOR (раздел 3.5) */}
           {isMulticolor && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">

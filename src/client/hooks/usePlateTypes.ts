@@ -12,20 +12,35 @@ export function usePlateTypes() {
   });
 }
 
+export function useActivePlateTypes() {
+  return useQuery({
+    queryKey: ['plate-types', 'active'],
+    queryFn: async () => {
+      const response = await apiClient.get<ApiResponse<PlateType[]>>('/api/plates/types/active');
+      return response.data;
+    },
+  });
+}
+
 export function useCreatePlateType() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: {
       format: string;
       manufacturer: string;
-      minStockThreshold: number;
+      minStockThreshold?: number;
       otherParams?: any;
     }) => {
-      const response = await apiClient.post<ApiResponse<PlateType>>('/api/plates/types', data);
+      const response = await apiClient.post<ApiResponse<PlateType>>('/api/plates/types', {
+        ...data,
+        minStockThreshold: data.minStockThreshold ?? 0,
+      });
       return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['plate-types'] });
+      queryClient.invalidateQueries({ queryKey: ['plate-types', 'active'] });
+      queryClient.invalidateQueries({ queryKey: ['settings', 'plate-thresholds'] });
     },
   });
 }
@@ -39,6 +54,23 @@ export function useUpdatePlateType() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['plate-types'] });
+      queryClient.invalidateQueries({ queryKey: ['plate-types', 'active'] });
+      queryClient.invalidateQueries({ queryKey: ['settings', 'plate-thresholds'] });
+    },
+  });
+}
+
+export function useArchivePlateType() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiClient.delete<ApiResponse<PlateType>>(`/api/plates/types/${id}`);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['plate-types'] });
+      queryClient.invalidateQueries({ queryKey: ['plate-types', 'active'] });
+      queryClient.invalidateQueries({ queryKey: ['settings', 'plate-thresholds'] });
     },
   });
 }

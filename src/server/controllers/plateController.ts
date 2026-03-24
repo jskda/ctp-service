@@ -18,6 +18,62 @@ import {
 export const plateController = {
   // --- PlateType operations ---
 
+  // GET /api/plates/types/active - только активные для выбора
+async getActiveTypes(req: Request, res: Response) {
+  try {
+    const plateTypes = await prisma.plateType.findMany({
+      where: { isActive: true },
+      orderBy: { format: 'asc' },
+    });
+    res.json({ success: true, data: plateTypes });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Failed to fetch active plate types' });
+  }
+},
+
+// POST /api/plates/types - создание типа пластины (уже есть, нужно убедиться что isActive=true по умолчанию)
+// (createType уже существует, он автоматически проставит isActive: true)
+
+// DELETE /api/plates/types/:id - мягкое удаление (деактивация)
+async archiveType(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+    const plateTypeId = typeof id === 'string' ? id : id[0];
+
+    // Проверяем, есть ли движения
+    const movements = await prisma.plateMovement.count({
+      where: { plateTypeId },
+    });
+
+    if (movements > 0) {
+      return res.status(400).json({
+        success: false,
+        error: `Cannot archive plate type with ${movements} movement(s)`,
+      });
+    }
+
+    const plateType = await prisma.plateType.update({
+      where: { id: plateTypeId },
+      data: { isActive: false, archivedAt: new Date() },
+    });
+
+    await prisma.eventLog.create({
+      data: {
+        eventType: 'plate.type.archived',
+        context: 'stock',
+        payload: { plateTypeId: plateType.id, format: plateType.format },
+      },
+    });
+
+    res.json({ success: true, data: plateType });
+  } catch (error) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ success: false, error: 'Plate type not found' });
+    }
+    res.status(500).json({ success: false, error: 'Failed to archive plate type' });
+  }
+},
+
   // GET /api/plates/types - список всех типов пластин
   async getAllTypes(req: Request, res: Response) {
     try {
@@ -429,6 +485,7 @@ export const plateController = {
           reason: 'NORMAL_USAGE',
           orderId: validatedData.orderId,
           responsibility: 'PRODUCTION',
+          writeOffCount: validatedData.writeOffCount || validatedData.quantity,
         },
       });
 
@@ -494,6 +551,7 @@ export const plateController = {
           reason: 'SCRAP_CLIENT',
           orderId: validatedData.orderId,
           responsibility: 'CLIENT',
+          writeOffCount: validatedData.writeOffCount || validatedData.quantity,
         },
       });
 
@@ -555,6 +613,7 @@ export const plateController = {
           reason: 'SCRAP_PRODUCTION',
           orderId: validatedData.orderId,
           responsibility: 'PRODUCTION',
+          writeOffCount: validatedData.writeOffCount || validatedData.quantity,
         },
       });
 
@@ -619,6 +678,7 @@ export const plateController = {
           reason: 'SCRAP_MATERIAL',
           orderId: validatedData.orderId || null,
           responsibility: 'MATERIALS',
+          writeOffCount: validatedData.writeOffCount || validatedData.quantity,
         },
       });
 
