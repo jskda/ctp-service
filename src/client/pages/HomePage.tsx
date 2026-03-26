@@ -105,21 +105,7 @@ export function HomePage() {
           </Card>
         </Link>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Database className="h-5 w-5" />
-              Действия
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Матрица допустимых действий
-              <br />
-              <span className="text-xs">Согласно спецификации, раздел 11</span>
-            </p>
-          </CardContent>
-        </Card>
+        
 
         <Link to="/settings">
           <Card>
