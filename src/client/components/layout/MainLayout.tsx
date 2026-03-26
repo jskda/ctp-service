@@ -18,7 +18,6 @@ const navigation = [
   { name: 'Заказы', to: '/orders', icon: Package },
   { name: 'Пластины', to: '/plates', icon: Layers },
   { name: 'Клиенты', to: '/clients', icon: Users },
-  { name: 'Спецификация', to: '/specification', icon: FileText },
   { name: 'Настройки', to: '/settings', icon: Settings },
 ];
 
@@ -79,7 +78,9 @@ export function MainLayout() {
         <div className="container">
           <p>CTP-Service — Учётно-организационная система CTP-производства © {new Date().getFullYear()}</p>
           <p className="mt-1 text-xs">
-            Соответствует спецификации: заказоориентированность, система действий, контрольные пометки
+            <a href="https://github.com/your-repo" target="_blank" rel="noopener noreferrer" className="hover:underline">
+              Документация на GitHub
+            </a>
           </p>
         </div>
       </footer>

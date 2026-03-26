@@ -7,7 +7,6 @@ import { OrdersPage } from './pages/OrdersPage';
 import { PlatesPage } from './pages/PlatesPage';
 import { ClientsPage } from './pages/ClientsPage';
 import { SettingsPage } from './pages/SettingsPage';
-import { SpecificationPage } from './pages/SpecificationPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -29,7 +28,6 @@ export default function App() {
             <Route path="clients" element={<ClientsPage />} />
             <Route path="plates" element={<PlatesPage />} />
             <Route path="settings" element={<SettingsPage />} />
-            <Route path="specification" element={<SpecificationPage />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Route>
         </Routes>
