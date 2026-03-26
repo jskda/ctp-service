@@ -13,7 +13,6 @@ export const clientController = {
             select: {
               id: true,
               status: true,
-              colorMode: true,
               clientOrderNum: true,
               plateFormat: true,
               totalPlates: true,
@@ -39,7 +38,6 @@ export const clientController = {
   async getById(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      
       const clientId = typeof id === 'string' ? id : id[0];
 
       const client = await prisma.client.findUnique({
@@ -84,11 +82,10 @@ export const clientController = {
   // POST /api/clients - создание клиента
   async create(req: Request, res: Response) {
     try {
-      const { name, internalCode, techNotes } = createClientSchema.parse(req.body);
+      const { name, techNotes } = createClientSchema.parse(req.body);
       const client = await prisma.client.create({
         data: { 
           name, 
-          internalCode: internalCode || null,
           techNotes: techNotes || [] 
         },
       });
@@ -96,7 +93,7 @@ export const clientController = {
         data: {
           eventType: 'client.created',
           context: 'system',
-          payload: { clientId: client.id, name: client.name, internalCode: client.internalCode },
+          payload: { clientId: client.id, name: client.name },
         },
       });
       res.status(201).json({ success: true, data: client });
@@ -164,7 +161,6 @@ export const clientController = {
         data: validatedData,
       });
       
-      // Логируем событие
       await prisma.eventLog.create({
         data: {
           eventType: 'client.updated',

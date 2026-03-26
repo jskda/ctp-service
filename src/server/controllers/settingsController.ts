@@ -107,35 +107,35 @@ export const settingsController = {
   // ============================================
   async getPlateStock(req: Request, res: Response) {
     try {
-      // Получаем все типы пластин с их остатками
+      // Получаем все типы пластин
       const plateTypes = await prisma.plateType.findMany({
-        include: {
-          movements: true,
-        },
+        where: { isActive: true },
       });
 
       // Рассчитываем остатки для каждого типа
-      const stockInfo = plateTypes.map((plateType) => {
-        const totalIncoming = plateType.movements
-          .filter(m => m.movementType === 'INCOMING')
-          .reduce((sum, m) => sum + m.quantity, 0);
-        
-        const totalOutgoing = plateType.movements
-          .filter(m => m.movementType === 'OUTGOING')
-          .reduce((sum, m) => sum + m.quantity, 0);
-        
-        const currentStock = totalIncoming - totalOutgoing;
-        const isDeficit = currentStock < plateType.minStockThreshold;
-
-        return {
-          plateTypeId: plateType.id,
-          format: plateType.format,
-          manufacturer: plateType.manufacturer,
-          currentStock,
-          minStockThreshold: plateType.minStockThreshold,
-          isDeficit,
-        };
-      });
+      const stockInfo = await Promise.all(
+        plateTypes.map(async (plateType) => {
+          // Суммируем ВСЕ движения (и положительные, и отрицательные)
+          const movements = await prisma.plateMovement.aggregate({
+            where: { plateTypeId: plateType.id },
+            _sum: { quantity: true },
+          });
+          
+          const currentStock = movements._sum.quantity || 0;
+          const isDeficit = currentStock < plateType.minStockThreshold;
+          
+          console.log(`Stock for ${plateType.format}: ${currentStock} (sum of all movements)`);
+          
+          return {
+            plateTypeId: plateType.id,
+            format: plateType.format,
+            manufacturer: plateType.manufacturer,
+            currentStock,
+            minStockThreshold: plateType.minStockThreshold,
+            isDeficit,
+          };
+        })
+      );
 
       res.json({
         success: true,

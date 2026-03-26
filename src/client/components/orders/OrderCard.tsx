@@ -3,17 +3,16 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Order } from "@/types";
 import { OrderStatusBadge } from "./OrderStatusBadge";
 import { Button } from "@/components/ui/button";
-import { FileText, FolderOpen, AlertTriangle, CheckCircle, Package, Hash, Ruler } from "lucide-react";
+import { Package, Hash, Ruler } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 
 interface OrderCardProps {
   order: Order;
   onAction: (action: string, orderId: string) => void;
-  hasFolder: boolean;
 }
 
-export function OrderCard({ order, onAction, hasFolder }: OrderCardProps) {
+export function OrderCard({ order, onAction }: OrderCardProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleAction = async (action: string) => {
@@ -55,41 +54,10 @@ export function OrderCard({ order, onAction, hasFolder }: OrderCardProps) {
       );
     }
 
-    actions.push(
-      <Button
-        key="folder"
-        size="sm"
-        variant="ghost"
-        onClick={() => handleAction(hasFolder ? 'open-folder' : 'create-folder')}
-        disabled={isLoading}
-      >
-        {hasFolder ? (
-          <>
-            <FolderOpen className="mr-2 h-4 w-4" />
-            Открыть папку
-          </>
-        ) : (
-          <>
-            <FileText className="mr-2 h-4 w-4" />
-            Создать папку
-          </>
-        )}
-      </Button>
-    );
-
     return actions;
   };
 
   const hasClientNotes = order.notesSnapshot?.clientTechNotes && order.notesSnapshot.clientTechNotes.length > 0;
-
-  const writeOffCount = order.plateMovements?.reduce((total, movement) => {
-    if (movement.reason?.startsWith('SCRAP_') && movement.writeOffCount) {
-      return total + movement.writeOffCount;
-    }
-    return total;
-  }, 0) || 0;
-
-  const remainingPlates = order.totalPlates - writeOffCount;
 
   return (
     <Card>
@@ -108,7 +76,6 @@ export function OrderCard({ order, onAction, hasFolder }: OrderCardProps) {
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">
                 {order.client?.name || 'Клиент не указан'}
-                {order.client?.internalCode && ` (${order.client.internalCode})`}
               </span>
               <OrderStatusBadge status={order.status} />
             </div>
@@ -124,24 +91,15 @@ export function OrderCard({ order, onAction, hasFolder }: OrderCardProps) {
             <div className="flex items-center gap-2">
               <Ruler className="h-4 w-4 text-muted-foreground" />
               <div>
-                <div className="text-xs text-muted-foreground">Формат</div>
-                <div className="font-medium">{order.plateFormat}</div>
+                <div className="text-xs text-muted-foreground">Формат пластин</div>
+                <div className="font-medium">{order.plateType?.format || order.plateFormat}</div>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <Package className="h-4 w-4 text-muted-foreground" />
               <div>
-                <div className="text-xs text-muted-foreground">Всего пластин</div>
-                <div className="font-medium">{order.totalPlates}</div>
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-md">
-            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-            <div>
-              <div className="text-xs text-muted-foreground">Списано / Осталось</div>
-              <div className={`font-medium ${writeOffCount > 0 ? 'text-destructive' : ''}`}>
-                {writeOffCount} / {remainingPlates}
+                <div className="text-xs text-muted-foreground">Пластин на заказ</div>
+                <div className="font-medium">{order.totalPlates} шт.</div>
               </div>
             </div>
           </div>
@@ -155,7 +113,7 @@ export function OrderCard({ order, onAction, hasFolder }: OrderCardProps) {
                 <ul className="space-y-1">
                   {order.notesSnapshot.clientTechNotes.map((note: string, idx: number) => (
                     <li key={idx} className="text-sm text-blue-800 flex items-start gap-2">
-                      <CheckCircle className="h-3 w-3 text-blue-500 mt-0.5 flex-shrink-0" />
+                      <span className="text-blue-500 mt-0.5 flex-shrink-0">•</span>
                       <span>{note}</span>
                     </li>
                   ))}

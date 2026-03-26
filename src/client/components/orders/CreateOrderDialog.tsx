@@ -17,12 +17,15 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Client } from "@/types";
+import { Client, PlateType } from "@/types";
+import { useActivePlateTypes } from "@/hooks/usePlateTypes";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 const createOrderSchema = z.object({
   clientId: z.string().min(1, "Выберите клиента"),
+  plateFormat: z.string().min(1, "Выберите формат пластин"),
   clientOrderNum: z.string().optional(),
-  plateFormat: z.string().min(1, "Укажите формат пластин"),
   totalPlates: z.coerce.number().int().min(1, "Количество пластин должно быть не менее 1"),
 });
 
@@ -36,25 +39,38 @@ interface CreateOrderDialogProps {
 export function CreateOrderDialog({ clients, onCreate }: CreateOrderDialogProps) {
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { data: plateTypes, isLoading: plateTypesLoading } = useActivePlateTypes();
 
   const form = useForm<CreateOrderForm>({
     resolver: zodResolver(createOrderSchema),
     defaultValues: {
       clientId: "",
-      clientOrderNum: "",
       plateFormat: "",
+      clientOrderNum: "",
       totalPlates: 1,
     },
   });
 
+  const selectedPlateFormat = form.watch("plateFormat");
+  const selectedPlateType = plateTypes?.find(p => p.format === selectedPlateFormat);
+  const currentStock = selectedPlateType?.currentStock || 0;
+
   const handleSubmit = async (data: CreateOrderForm) => {
+    setError(null);
     setIsLoading(true);
     try {
+      // Проверяем наличие пластин перед отправкой
+      if (currentStock < data.totalPlates) {
+        throw new Error(`Недостаточно пластин формата ${data.plateFormat}. Доступно: ${currentStock}, требуется: ${data.totalPlates}`);
+      }
+      
       await onCreate(data);
       form.reset();
       setOpen(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Create order failed:', error);
+      setError(error.message || 'Ошибка при создании заказа');
     } finally {
       setIsLoading(false);
     }
@@ -72,9 +88,17 @@ export function CreateOrderDialog({ clients, onCreate }: CreateOrderDialogProps)
         <DialogHeader>
           <DialogTitle>Создать новый заказ</DialogTitle>
           <DialogDescription>
-            Заполните информацию о заказе
+            Заполните информацию о заказе. Пластины будут списаны сразу после создания заказа.
           </DialogDescription>
         </DialogHeader>
+        
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
             <FormField
@@ -92,11 +116,47 @@ export function CreateOrderDialog({ clients, onCreate }: CreateOrderDialogProps)
                     <SelectContent>
                       {clients.map((client) => (
                         <SelectItem key={client.id} value={client.id}>
-                          {client.name} {client.internalCode ? `(${client.internalCode})` : ''}
+                          {client.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="plateFormat"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Формат пластин *</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder={plateTypesLoading ? "Загрузка..." : "Выберите формат пластин"} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {plateTypes?.map((type) => (
+                        <SelectItem key={type.id} value={type.format}>
+                          {type.format} ({type.manufacturer}) - Доступно: {type.currentStock || 0} шт.
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Формат пластин, используемых для этого заказа. Пластины будут списаны со склада.
+                  </FormDescription>
+                  {selectedPlateFormat && selectedPlateType && (
+                    <div className="text-sm mt-2 p-2 bg-muted rounded-md">
+                      <span className="font-medium">Доступно на складе:</span>{' '}
+                      <span className={currentStock >= form.watch("totalPlates") ? "text-green-600" : "text-red-600"}>
+                        {currentStock} шт.
+                      </span>
+                    </div>
+                  )}
                   <FormMessage />
                 </FormItem>
               )}
@@ -121,29 +181,29 @@ export function CreateOrderDialog({ clients, onCreate }: CreateOrderDialogProps)
 
             <FormField
               control={form.control}
-              name="plateFormat"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Формат пластин *</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Например: 1030×800" {...field} />
-                  </FormControl>
-                  <FormDescription>
-                    Формат пластин, используемых для этого заказа
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
               name="totalPlates"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Всего пластин *</FormLabel>
                   <FormControl>
-                    <Input type="number" min="1" placeholder="Количество пластин на заказ" {...field} />
+                    <Input 
+                      type="number" 
+                      min="1" 
+                      placeholder="Количество пластин на заказ" 
+                      {...field}
+                      onChange={(e) => {
+                        field.onChange(e);
+                        // Проверяем достаточно ли пластин при изменении количества
+                        if (selectedPlateType && Number(e.target.value) > currentStock) {
+                          form.setError('totalPlates', {
+                            type: 'manual',
+                            message: `Недостаточно пластин. Доступно: ${currentStock} шт.`
+                          });
+                        } else {
+                          form.clearErrors('totalPlates');
+                        }
+                      }}
+                    />
                   </FormControl>
                   <FormDescription>
                     Общее количество пластин, необходимое для заказа
@@ -153,7 +213,11 @@ export function CreateOrderDialog({ clients, onCreate }: CreateOrderDialogProps)
               )}
             />
 
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button 
+              type="submit" 
+              className="w-full" 
+              disabled={isLoading || (selectedPlateType && form.watch("totalPlates") > currentStock)}
+            >
               {isLoading ? "Создание..." : "Создать заказ"}
             </Button>
           </form>

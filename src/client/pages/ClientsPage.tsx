@@ -1,5 +1,4 @@
-// src/client/pages/ClientsPage.tsx
-// src/client/pages/ClientsPage.tsx (полностью обновлённая версия)
+// src/client/pages/ClientsPage.tsx - полностью переписываем, убирая internalCode
 import { useState } from 'react';
 import { useClients, useCreateClient, useUpdateClient, useArchiveClient } from '@/hooks/useClients';
 import { Client } from '@/types';
@@ -9,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Edit, Save, X, Plus, Archive, AlertCircle, Hash } from 'lucide-react';
+import { Edit, Save, X, Plus, Archive, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export function ClientsPage() {
@@ -19,9 +18,9 @@ export function ClientsPage() {
   const archiveMutation = useArchiveClient();
   
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ name: '', internalCode: '', techNotes: '' });
+  const [formData, setFormData] = useState({ name: '', techNotes: '' });
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [newClient, setNewClient] = useState({ name: '', internalCode: '', techNotes: '' });
+  const [newClient, setNewClient] = useState({ name: '', techNotes: '' });
   const [error, setError] = useState<string | null>(null);
 
   const activeClients = clients?.filter(c => c.isActive !== false) || [];
@@ -31,7 +30,6 @@ export function ClientsPage() {
     setEditingId(client.id);
     setFormData({
       name: client.name,
-      internalCode: client.internalCode || '',
       techNotes: client.techNotes ? client.techNotes.join('\n') : '',
     });
   };
@@ -47,12 +45,12 @@ export function ClientsPage() {
         id: clientId,
         data: {
           name: formData.name,
-          internalCode: formData.internalCode || null,
           techNotes: techNotes.length > 0 ? techNotes : undefined,
         },
       });
       setEditingId(null);
       setError(null);
+      await refetch();
     } catch (err: any) {
       setError(err.message || 'Ошибка сохранения');
     }
@@ -71,12 +69,12 @@ export function ClientsPage() {
       
       await createMutation.mutateAsync({
         name: newClient.name.trim(),
-        internalCode: newClient.internalCode.trim() || undefined,
         techNotes: techNotes.length > 0 ? techNotes : undefined,
       });
       setCreateDialogOpen(false);
-      setNewClient({ name: '', internalCode: '', techNotes: '' });
+      setNewClient({ name: '', techNotes: '' });
       setError(null);
+      await refetch();
     } catch (err: any) {
       setError(err.message || 'Ошибка создания');
     }
@@ -86,6 +84,7 @@ export function ClientsPage() {
     if (confirm(`Архивировать клиента "${clientName}"? Он не будет доступен для новых заказов, но останется в истории.`)) {
       try {
         await archiveMutation.mutateAsync(clientId);
+        await refetch();
       } catch (err: any) {
         alert(err.message || 'Нельзя архивировать клиента с активными заказами');
       }
@@ -132,17 +131,6 @@ export function ClientsPage() {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium">Внутренний код</label>
-                <Input
-                  value={newClient.internalCode}
-                  onChange={(e) => setNewClient({ ...newClient, internalCode: e.target.value })}
-                  placeholder="CL-001"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Внутренний код клиента для идентификации в системе
-                </p>
-              </div>
-              <div>
                 <label className="text-sm font-medium">Технические заметки</label>
                 <Textarea
                   value={newClient.techNotes}
@@ -173,28 +161,69 @@ export function ClientsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Клиент</TableHead>
-                <TableHead>Внутренний код</TableHead>
                 <TableHead>Технические заметки</TableHead>
                 <TableHead className="text-right">Действия</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {activeClients.map((client) => (
-                <ClientRow
-                  key={client.id}
-                  client={client}
-                  isEditing={editingId === client.id}
-                  formData={formData}
-                  onEdit={() => handleEdit(client)}
-                  onSave={() => handleSave(client.id)}
-                  onCancel={() => setEditingId(null)}
-                  onArchive={() => handleArchive(client.id, client.name)}
-                  setFormData={setFormData}
-                />
-              ))}
+              {activeClients.map((client) => {
+                const isEditing = editingId === client.id;
+                return (
+                  <TableRow key={client.id}>
+                    <TableCell className="font-medium">
+                      {isEditing ? (
+                        <Input
+                          value={formData.name}
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        />
+                      ) : (
+                        client.name
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {isEditing ? (
+                        <Textarea
+                          value={formData.techNotes}
+                          onChange={(e) => setFormData({ ...formData, techNotes: e.target.value })}
+                          rows={3}
+                        />
+                      ) : client.techNotes?.length > 0 ? (
+                        <div className="space-y-1">
+                          {client.techNotes.map((note: string, i: number) => (
+                            <div key={i} className="text-sm bg-muted p-2 rounded">{note}</div>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {isEditing ? (
+                        <div className="flex gap-2 justify-end">
+                          <Button size="sm" onClick={() => handleSave(client.id)}>
+                            <Save className="h-4 w-4" />
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}>
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex gap-2 justify-end">
+                          <Button variant="ghost" size="sm" onClick={() => handleEdit(client)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleArchive(client.id, client.name)}>
+                            <Archive className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
               {activeClients.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground">
+                  <TableCell colSpan={3} className="text-center text-muted-foreground">
                     Нет активных клиентов. Добавьте нового.
                   </TableCell>
                 </TableRow>
@@ -204,7 +233,7 @@ export function ClientsPage() {
         </CardContent>
       </Card>
 
-      {/* Архивированные клиенты (свёрнуто) */}
+      {/* Архивированные клиенты */}
       {archivedClients.length > 0 && (
         <Card>
           <CardHeader>
@@ -216,7 +245,6 @@ export function ClientsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Клиент</TableHead>
-                  <TableHead>Внутренний код</TableHead>
                   <TableHead>Дата архивации</TableHead>
                 </TableRow>
               </TableHeader>
@@ -224,14 +252,6 @@ export function ClientsPage() {
                 {archivedClients.map((client) => (
                   <TableRow key={client.id}>
                     <TableCell className="text-muted-foreground">{client.name}</TableCell>
-                    <TableCell>
-                      {client.internalCode && (
-                        <span className="inline-flex items-center gap-1 text-sm font-mono text-muted-foreground">
-                          <Hash className="h-3 w-3" />
-                          {client.internalCode}
-                        </span>
-                      )}
-                    </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {client.archivedAt ? new Date(client.archivedAt).toLocaleDateString() : '—'}
                     </TableCell>
@@ -243,70 +263,5 @@ export function ClientsPage() {
         </Card>
       )}
     </div>
-  );
-}
-
-// Вспомогательный компонент для строки клиента
-function ClientRow({ client, isEditing, formData, onEdit, onSave, onCancel, onArchive, setFormData }: any) {
-  return (
-    <TableRow>
-      <TableCell className="font-medium">
-        {isEditing ? (
-          <Input
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          />
-        ) : (
-          client.name
-        )}
-      </TableCell>
-      <TableCell>
-        {isEditing ? (
-          <Input
-            value={formData.internalCode}
-            onChange={(e) => setFormData({ ...formData, internalCode: e.target.value })}
-            placeholder="Внутренний код"
-            className="w-32"
-          />
-        ) : client.internalCode ? (
-          <span className="inline-flex items-center gap-1 text-sm font-mono">
-            <Hash className="h-3 w-3" />
-            {client.internalCode}
-          </span>
-        ) : (
-          <span className="text-muted-foreground">—</span>
-        )}
-      </TableCell>
-      <TableCell>
-        {isEditing ? (
-          <Textarea
-            value={formData.techNotes}
-            onChange={(e) => setFormData({ ...formData, techNotes: e.target.value })}
-            rows={3}
-          />
-        ) : client.techNotes?.length > 0 ? (
-          <div className="space-y-1">
-            {client.techNotes.map((note: string, i: number) => (
-              <div key={i} className="text-sm bg-muted p-2 rounded">{note}</div>
-            ))}
-          </div>
-        ) : (
-          <span className="text-muted-foreground">—</span>
-        )}
-      </TableCell>
-      <TableCell className="text-right">
-        {isEditing ? (
-          <div className="flex gap-2 justify-end">
-            <Button size="sm" onClick={onSave}><Save className="h-4 w-4" /></Button>
-            <Button size="sm" variant="ghost" onClick={onCancel}><X className="h-4 w-4" /></Button>
-          </div>
-        ) : (
-          <div className="flex gap-2 justify-end">
-            <Button variant="ghost" size="sm" onClick={onEdit}><Edit className="h-4 w-4" /></Button>
-            <Button variant="ghost" size="sm" onClick={onArchive}><Archive className="h-4 w-4" /></Button>
-          </div>
-        )}
-      </TableCell>
-    </TableRow>
   );
 }

@@ -1,3 +1,4 @@
+// src/client/hooks/usePlateTypes.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import { PlateType, ApiResponse } from '@/types';
@@ -7,6 +8,7 @@ export function usePlateTypes() {
     queryKey: ['plate-types'],
     queryFn: async () => {
       const response = await apiClient.get<ApiResponse<PlateType[]>>('/api/plates/types');
+      console.log('All plate types:', response.data);
       return response.data;
     },
   });
@@ -17,6 +19,7 @@ export function useActivePlateTypes() {
     queryKey: ['plate-types', 'active'],
     queryFn: async () => {
       const response = await apiClient.get<ApiResponse<PlateType[]>>('/api/plates/types/active');
+      console.log('Active plate types:', response.data);
       return response.data;
     },
   });

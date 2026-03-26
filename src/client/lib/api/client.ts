@@ -53,4 +53,22 @@ export const apiClient = {
     
     return response.json() as T;
   },
+
+  async delete<T>(endpoint: string): Promise<T> {
+    const url = `${API_BASE_URL}${endpoint}`;
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`API Error ${response.status} ${endpoint}:`, errorText);
+      throw new Error(`API Error ${response.status}: ${errorText}`);
+    }
+    
+    return response.json() as T;
+  },
 };

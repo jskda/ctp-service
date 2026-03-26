@@ -63,6 +63,7 @@ export function usePlateTypeThresholds() {
     queryKey: ['settings', 'plate-thresholds'],
     queryFn: async () => {
       const response = await apiClient.get<ApiResponse<PlateTypeThreshold[]>>('/api/settings/plates/stock');
+      console.log('Plate thresholds response:', response.data);
       return response.data;
     },
   });

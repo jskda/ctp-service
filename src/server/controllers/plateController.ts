@@ -1,3 +1,4 @@
+// src/server/controllers/plateController.ts
 import type { Request, Response } from 'express';
 import { prisma } from '../app';
 import {
@@ -19,14 +20,41 @@ export const plateController = {
   // --- PlateType operations ---
 
   // GET /api/plates/types/active - только активные для выбора
+// src/server/controllers/plateController.ts - исправляем getActiveTypes
 async getActiveTypes(req: Request, res: Response) {
   try {
     const plateTypes = await prisma.plateType.findMany({
       where: { isActive: true },
       orderBy: { format: 'asc' },
     });
-    res.json({ success: true, data: plateTypes });
+    
+    // Вычисляем остатки для каждого типа
+    const plateTypesWithStock = await Promise.all(
+      plateTypes.map(async (plateType) => {
+        const movements = await prisma.plateMovement.aggregate({
+          where: { plateTypeId: plateType.id },
+          _sum: { quantity: true },
+        });
+        
+        const currentStock = movements._sum.quantity || 0;
+        const isDeficit = currentStock < plateType.minStockThreshold;
+        
+        console.log(`Plate type ${plateType.format}: current stock = ${currentStock}`);
+        
+        return {
+          ...plateType,
+          currentStock,
+          isDeficit,
+        };
+      })
+    );
+    
+    res.json({
+      success: true,
+      data: plateTypesWithStock,
+    });
   } catch (error) {
+    console.error('Error fetching active plate types:', error);
     res.status(500).json({ success: false, error: 'Failed to fetch active plate types' });
   }
 },
@@ -74,49 +102,47 @@ async archiveType(req: Request, res: Response) {
   }
 },
 
-  // GET /api/plates/types - список всех типов пластин
-  async getAllTypes(req: Request, res: Response) {
-    try {
-      const plateTypes = await prisma.plateType.findMany({
-        include: {
-          movements: {
-            orderBy: { createdAt: 'desc' },
-            take: 10,
-          },
-        },
-        orderBy: { createdAt: 'desc' },
-      });
-      
-      // Вычисляем остатки для каждого типа
-      const plateTypesWithStock = await Promise.all(
-        plateTypes.map(async (plateType) => {
-          const stock = await prisma.plateMovement.groupBy({
-            by: ['plateTypeId'],
-            where: { plateTypeId: plateType.id },
-            _sum: { quantity: true },
-          });
-
-          const totalQuantity = stock[0]?._sum.quantity || 0;
-          const isDeficit = totalQuantity < plateType.minStockThreshold;
-
-          return {
-            ...plateType,
-            currentStock: totalQuantity,
-            isDeficit,
-          };
-        })
-      );
-
-      res.json({
-        success: true,
-        data: plateTypesWithStock,
-        count: plateTypesWithStock.length,
-      });
-    } catch (error) {
-      console.error('Error fetching plate types:', error);
-      res.status(500).json({ success: false, error: 'Failed to fetch plate types' });
-    }
-  },
+// src/server/controllers/plateController.ts - исправляем getAllTypes
+async getAllTypes(req: Request, res: Response) {
+  try {
+    const plateTypes = await prisma.plateType.findMany({
+      where: { isActive: true },
+      orderBy: { format: 'asc' },
+    });
+    
+    // Вычисляем остатки для каждого типа
+    const plateTypesWithStock = await Promise.all(
+      plateTypes.map(async (plateType) => {
+        // Суммируем все движения по этому типу пластин
+        const movements = await prisma.plateMovement.aggregate({
+          where: { plateTypeId: plateType.id },
+          _sum: { quantity: true },
+        });
+        
+        // quantity может быть отрицательным (списание) или положительным (поступление)
+        const currentStock = movements._sum.quantity || 0;
+        const isDeficit = currentStock < plateType.minStockThreshold;
+        
+        console.log(`Plate ${plateType.format}: total movements sum = ${currentStock}`);
+        
+        return {
+          ...plateType,
+          currentStock,
+          isDeficit,
+        };
+      })
+    );
+    
+    res.json({
+      success: true,
+      data: plateTypesWithStock,
+      count: plateTypesWithStock.length,
+    });
+  } catch (error) {
+    console.error('Error fetching plate types:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch plate types' });
+  }
+},
 
   // GET /api/plates/types/:id - получить тип пластины по ID
   async getTypeById(req: Request, res: Response) {
@@ -135,7 +161,13 @@ async archiveType(req: Request, res: Response) {
                 select: {
                   id: true,
                   status: true,
-                  colorMode: true,
+                  clientId: true,
+                  clientOrderNum: true,
+                  plateFormat: true,
+                  totalPlates: true,
+                  notesSnapshot: true,
+                  createdAt: true,
+                  updatedAt: true,
                 },
               },
             },

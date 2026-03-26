@@ -19,8 +19,11 @@ export const orderController = {
             select: {
               id: true,
               name: true,
-              internalCode: true,
               techNotes: true,
+              isActive: true,
+              archivedAt: true,
+              createdAt: true,
+              updatedAt: true,
             },
           },
           plateMovements: {
@@ -51,7 +54,17 @@ export const orderController = {
       const order = await prisma.order.findUnique({
         where: { id: orderId },
         include: {
-          client: true,
+          client: {
+            select: {
+              id: true,
+              name: true,
+              techNotes: true,
+              isActive: true,
+              archivedAt: true,
+              createdAt: true,
+              updatedAt: true,
+            },
+          },
           plateMovements: {
             include: {
               plateType: true,
@@ -75,31 +88,91 @@ export const orderController = {
     try {
       const validatedData = createOrderSchema.parse(req.body);
       
+      console.log('Creating order with data:', validatedData);
+      
       const client = await prisma.client.findUnique({
         where: { id: validatedData.clientId },
       });
-
+      
       if (!client) {
         return res.status(404).json({ success: false, error: 'Client not found' });
       }
-
-      const notesSnapshot: any = {};
       
+      // НАХОДИМ ТИП ПЛАСТИНЫ ПО ФОРМАТУ
+      const plateType = await prisma.plateType.findFirst({
+        where: { format: validatedData.plateFormat, isActive: true },
+      });
+      
+      if (!plateType) {
+        return res.status(400).json({ 
+          success: false, 
+          error: `Пластины формата ${validatedData.plateFormat} не найдены в системе` 
+        });
+      }
+      
+      // ПРОВЕРЯЕМ ТЕКУЩИЙ ОСТАТОК ДО СПИСАНИЯ
+      const movementsBefore = await prisma.plateMovement.aggregate({
+        where: { plateTypeId: plateType.id },
+        _sum: { quantity: true },
+      });
+      
+      const currentStockBefore = movementsBefore._sum.quantity || 0;
+      console.log(`Before order: stock for ${plateType.format} = ${currentStockBefore}`);
+      
+      if (currentStockBefore < validatedData.totalPlates) {
+        return res.status(400).json({ 
+          success: false, 
+          error: `Недостаточно пластин формата ${validatedData.plateFormat}. Доступно: ${currentStockBefore}, требуется: ${validatedData.totalPlates}` 
+        });
+      }
+      
+      const notesSnapshot: any = {};
       if (client.techNotes && Array.isArray(client.techNotes)) {
         notesSnapshot.clientTechNotes = client.techNotes;
       }
-
-      const order = await prisma.order.create({
-        data: {
-          clientId: validatedData.clientId,
-          status: 'NEW',
-          clientOrderNum: validatedData.clientOrderNum || null,
-          plateFormat: validatedData.plateFormat,
-          totalPlates: validatedData.totalPlates,
-          notesSnapshot: Object.keys(notesSnapshot).length > 0 ? notesSnapshot : undefined,
-        },
+      
+      // СОЗДАЕМ ЗАКАЗ И СПИСЫВАЕМ ПЛАСТИНЫ В ТРАНЗАКЦИИ
+      const order = await prisma.$transaction(async (tx) => {
+        // Создаем заказ
+        const newOrder = await tx.order.create({
+          data: {
+            clientId: validatedData.clientId,
+            status: 'NEW',
+            clientOrderNum: validatedData.clientOrderNum || null,
+            plateFormat: validatedData.plateFormat,
+            totalPlates: validatedData.totalPlates,
+            notesSnapshot: Object.keys(notesSnapshot).length > 0 ? notesSnapshot : undefined,
+          },
+        });
+        
+        // Создаем движение списания (ОТРИЦАТЕЛЬНОЕ количество)
+        const movement = await tx.plateMovement.create({
+          data: {
+            plateTypeId: plateType.id,
+            quantity: -validatedData.totalPlates,
+            movementType: 'OUTGOING',
+            reason: 'NORMAL_USAGE',
+            orderId: newOrder.id,
+            responsibility: 'PRODUCTION',
+            writeOffCount: validatedData.totalPlates,
+          },
+        });
+        
+        console.log(`Created movement: quantity = ${movement.quantity} for order ${newOrder.id}`);
+        
+        return newOrder;
       });
-
+      
+      // ПРОВЕРЯЕМ ОСТАТОК ПОСЛЕ СПИСАНИЯ
+      const movementsAfter = await prisma.plateMovement.aggregate({
+        where: { plateTypeId: plateType.id },
+        _sum: { quantity: true },
+      });
+      
+      const currentStockAfter = movementsAfter._sum.quantity || 0;
+      console.log(`After order: stock for ${plateType.format} = ${currentStockAfter}`);
+      console.log(`Decreased by: ${currentStockBefore - currentStockAfter}`);
+      
       await prisma.eventLog.create({
         data: {
           eventType: 'order.created',
@@ -116,11 +189,11 @@ export const orderController = {
           },
         },
       });
-
+      
       res.status(201).json({ 
         success: true, 
         data: order,
-        message: 'Заказ создан'
+        message: `Заказ создан. Списано ${validatedData.totalPlates} пластин формата ${validatedData.plateFormat}. Остаток: ${currentStockAfter} шт.`
       });
     } catch (error: any) {
       if (error.name === 'ZodError') {

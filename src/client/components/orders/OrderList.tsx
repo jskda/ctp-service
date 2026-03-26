@@ -5,10 +5,9 @@ import { OrderCard } from "./OrderCard";
 interface OrderListProps {
   orders: Order[];
   onAction: (action: string, orderId: string) => void;
-  folderStatus: Record<string, boolean>;
 }
 
-export function OrderList({ orders, onAction, folderStatus }: OrderListProps) {
+export function OrderList({ orders, onAction }: OrderListProps) {
   if (orders.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground">
@@ -24,7 +23,6 @@ export function OrderList({ orders, onAction, folderStatus }: OrderListProps) {
           key={order.id}
           order={order}
           onAction={onAction}
-          hasFolder={folderStatus[order.id] || false}
         />
       ))}
     </div>

@@ -11,7 +11,6 @@ export type Responsibility = 'CLIENT' | 'PRODUCTION' | 'MATERIALS' | null;
 export interface Client {
   id: string;
   name: string;
-  internalCode?: string | null;
   techNotes?: string[] | null;
   createdAt: string;
   updatedAt: string;
@@ -25,12 +24,15 @@ export interface Order {
   client?: Client;
   status: OrderStatus;
   clientOrderNum?: string | null;
+  plateTypeId?: string | null;
+  plateType?: PlateType;
   plateFormat: string;
   totalPlates: number;
   notesSnapshot?: {
     clientTechNotes?: string[];
     [key: string]: any;
   };
+  plateMovements?: PlateMovement[];
   createdAt: string;
   updatedAt: string;
 }
@@ -89,6 +91,6 @@ export interface ApiResponse<T = any> {
 
 export interface OrderStats {
   totalPlates: number;
-  writeOffCount: number;
+  usedPlates: number;
   remainingPlates: number;
 }

@@ -1,12 +1,12 @@
 // src/client/pages/OrdersPage.tsx
 import { useState } from "react";
 import { useOrders, useCreateOrder, useStartProcessing, useCompleteOrder, CreateOrderData } from "@/hooks/useOrders";
-import { useClients } from "@/hooks/useClients";
+import { useActiveClients } from "@/hooks/useClients";
 import { useDeficit } from "@/hooks/useDeficit";
 import { OrderList } from "@/components/orders/OrderList";
 import { CreateOrderDialog } from "@/components/orders/CreateOrderDialog";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, AlertTriangle, Info } from "lucide-react";
+import { RefreshCw, Info } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function OrdersPage() {
@@ -17,13 +17,11 @@ export function OrdersPage() {
     refetch 
   } = useOrders();
   
-  const { data: clients } = useClients();
+  const { data: clients } = useActiveClients();
   const { data: deficits } = useDeficit();
   const createOrderMutation = useCreateOrder();
   const startProcessingMutation = useStartProcessing();
   const completeOrderMutation = useCompleteOrder();
-  
-  const [folderStatus] = useState<Record<string, boolean>>({});
 
   const handleOrderAction = async (action: string, orderId: string) => {
     try {
@@ -33,12 +31,6 @@ export function OrdersPage() {
           break;
         case 'complete':
           await completeOrderMutation.mutateAsync(orderId);
-          break;
-        case 'create-folder':
-          console.log('Создание папки для заказа:', orderId);
-          break;
-        case 'open-folder':
-          console.log('Открытие папки заказа:', orderId);
           break;
         default:
           console.log(`Action ${action} for order ${orderId}`);
@@ -53,6 +45,7 @@ export function OrdersPage() {
       await createOrderMutation.mutateAsync(data);
     } catch (error) {
       console.error('Error creating order:', error);
+      throw error;
     }
   };
 
@@ -112,7 +105,7 @@ export function OrdersPage() {
       <Alert>
         <Info className="h-4 w-4" />
         <AlertDescription>
-          <strong>Поля заказа:</strong> Формат пластин, количество пластин, внутренний номер заказа клиента — 
+          <strong>Поля заказа:</strong> Формат пластин, количество пластин на заказ, внутренний номер заказа клиента — 
           заполняются при создании и отображаются в карточке заказа.
         </AlertDescription>
       </Alert>
@@ -139,7 +132,6 @@ export function OrdersPage() {
               <OrderList
                 orders={newOrders}
                 onAction={handleOrderAction}
-                folderStatus={folderStatus}
               />
             </div>
           )}
@@ -150,7 +142,6 @@ export function OrdersPage() {
               <OrderList
                 orders={processOrders}
                 onAction={handleOrderAction}
-                folderStatus={folderStatus}
               />
             </div>
           )}
@@ -161,7 +152,6 @@ export function OrdersPage() {
               <OrderList
                 orders={doneOrders}
                 onAction={handleOrderAction}
-                folderStatus={folderStatus}
               />
             </div>
           )}

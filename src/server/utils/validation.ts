@@ -3,20 +3,18 @@ import { z } from 'zod';
 
 export const createClientSchema = z.object({
   name: z.string().min(1, 'Имя клиента обязательно'),
-  internalCode: z.string().optional(),
   techNotes: z.array(z.string()).optional(),
 });
 
 export const updateClientTechNotesSchema = z.object({
   techNotes: z.array(z.string()).optional(),
-  internalCode: z.string().optional(),
 });
 
 export const createOrderSchema = z.object({
-  clientId: z.string().min(1, 'ID клиента обязателен'),
+  clientId: z.string().min(1, 'Выберите клиента'),
+  plateFormat: z.string().min(1, 'Выберите формат пластин'),
   clientOrderNum: z.string().optional(),
-  plateFormat: z.string().min(1, 'Формат пластин обязателен'),
-  totalPlates: z.number().int().min(1, 'Количество пластин должно быть не менее 1'),
+  totalPlates: z.coerce.number().int().min(1, 'Количество пластин должно быть не менее 1'),
 });
 
 export const createPlateTypeSchema = z.object({

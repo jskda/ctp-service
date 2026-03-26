@@ -5,8 +5,8 @@ import { Order, ApiResponse } from '@/types';
 
 export interface CreateOrderData {
   clientId: string;
-  clientOrderNum?: string;
   plateFormat: string;
+  clientOrderNum?: string;
   totalPlates: number;
 }
 
@@ -24,11 +24,23 @@ export function useCreateOrder() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: CreateOrderData) => {
-      const response = await apiClient.post<ApiResponse<Order>>('/api/orders', data);
+      const response = await apiClient.post<ApiResponse<Order>>('/api/orders', {
+        clientId: data.clientId,
+        clientOrderNum: data.clientOrderNum,
+        plateFormat: data.plateFormat,
+        totalPlates: data.totalPlates,
+      });
       return response.data;
     },
     onSuccess: () => {
+      // Обновляем оба квери - и заказы, и остатки пластин
       queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['plate-types'] });
+      queryClient.invalidateQueries({ queryKey: ['settings', 'plate-thresholds'] });
+    },
+    onError: (error: any) => {
+      console.error('Create order error:', error);
+      throw error;
     },
   });
 }
@@ -55,32 +67,6 @@ export function useCompleteOrder() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] });
-    },
-  });
-}
-
-export function useRecordScrap() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (data: {
-      plateTypeId: string;
-      orderId: string;
-      quantity: number;
-      reason: 'SCRAP_CLIENT' | 'SCRAP_PRODUCTION' | 'SCRAP_MATERIAL';
-      writeOffCount?: number;
-    }) => {
-      const endpoint = `/api/plates/movements/scrap/${data.reason === 'SCRAP_CLIENT' ? 'client' : data.reason === 'SCRAP_PRODUCTION' ? 'production' : 'material'}`;
-      const response = await apiClient.post<ApiResponse>(endpoint, {
-        plateTypeId: data.plateTypeId,
-        orderId: data.orderId,
-        quantity: data.quantity,
-        writeOffCount: data.writeOffCount,
-      });
-      return response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['orders'] });
-      queryClient.invalidateQueries({ queryKey: ['plates'] });
     },
   });
 }

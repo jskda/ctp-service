@@ -13,7 +13,6 @@ model Client {
   id               String   @id @default(cuid())
   name             String
   techNotes        Json?
-  internalCode     String?
   isActive         Boolean  @default(true)
   archivedAt       DateTime?
   orders           Order[]
@@ -21,7 +20,7 @@ model Client {
   updatedAt        DateTime @updatedAt
 
   @@index([isActive])
-  @@index([internalCode])
+  // Удаляем @@index([internalCode])
 }
 
 model PlateType {

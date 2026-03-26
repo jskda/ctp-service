@@ -6,12 +6,12 @@ const router = Router();
 
 // Plate types
 router.get('/types', plateController.getAllTypes);
+router.get('/types/active', plateController.getActiveTypes);  // этот маршрут должен быть ПЕРЕД /types/:id
 router.get('/types/:id', plateController.getTypeById);
 router.post('/types', plateController.createType);
 router.put('/types/:id', plateController.updateType);
 router.put('/types/:id/threshold', plateController.updateThreshold);
-router.get('/types/active', plateController.getActiveTypes);  // новый
-router.delete('/types/:id', plateController.archiveType);     // новый
+router.delete('/types/:id', plateController.archiveType);
 
 // Plate movements - incoming
 router.post('/movements/purchase', plateController.recordPurchase);
