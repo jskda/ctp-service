@@ -1,23 +1,27 @@
 import type { Request, Response } from 'express';
 import { prisma } from '../app';
 
+const SYSTEM_SETTINGS_KEY = 'system';
+
 export const settingsController = {
   // ============================================
   // System Settings
   // ============================================
-  async getSystemSettings(req: Request, res: Response) {
+async getSystemSettings(req: Request, res: Response) {
     try {
-      // Возвращаем настройки по умолчанию или из БД
-      res.json({
-        success: true,
-        data: {
-          companyName: 'CTP-Service',
-          currency: 'RUB',
-          defaultColorMode: 'CMYK' as const,
-          autoArchiveDays: 30,
-          enableNotifications: true,
-        },
+      const record = await prisma.systemSetting.findUnique({
+        where: { key: SYSTEM_SETTINGS_KEY },
       });
+
+      const defaultSettings = {
+        companyName: 'CTP-Service',
+        autoArchiveDays: 30,
+        enableNotifications: true,
+      };
+
+      const data = record ? (record.value as any) : defaultSettings;
+
+      res.json({ success: true, data });
     } catch (error) {
       console.error('Error fetching system settings:', error);
       res.status(500).json({
@@ -29,20 +33,23 @@ export const settingsController = {
 
   async updateSystemSettings(req: Request, res: Response) {
     try {
-      const { companyName, currency, defaultColorMode, autoArchiveDays, enableNotifications } = req.body;
-      
-      // Здесь можно сохранить настройки в БД
-      // Например, в таблицу SystemSettings
-      
+      const { companyName, autoArchiveDays, enableNotifications } = req.body;
+
+      const value = {
+        companyName,
+        autoArchiveDays,
+        enableNotifications,
+      };
+
+      const record = await prisma.systemSetting.upsert({
+        where: { key: SYSTEM_SETTINGS_KEY },
+        update: { value },
+        create: { key: SYSTEM_SETTINGS_KEY, value },
+      });
+
       res.json({
         success: true,
-        data: {
-          companyName,
-          currency,
-          defaultColorMode,
-          autoArchiveDays,
-          enableNotifications,
-        },
+        data: record.value,
       });
     } catch (error) {
       console.error('Error updating system settings:', error);

@@ -21,7 +21,6 @@ import { TabsContent } from '@/components/ui/tabs';
 
 const systemSettingsSchema = z.object({
   companyName: z.string().min(1, 'Название компании обязательно'),
-  currency: z.string().min(1, 'Валюта обязательна'),
   autoArchiveDays: z.coerce.number().min(1, 'Минимум 1 день').max(365, 'Максимум 365 дней'),
   enableNotifications: z.boolean(),
 });
@@ -36,7 +35,6 @@ export function SystemSettings() {
     resolver: zodResolver(systemSettingsSchema),
     values: settings || {
       companyName: '',
-      currency: 'RUB',
       autoArchiveDays: 30,
       enableNotifications: true,
     },
@@ -77,7 +75,7 @@ export function SystemSettings() {
         <CardHeader>
           <CardTitle>Системные настройки</CardTitle>
           <CardDescription>
-            Общие параметры системы и компании
+            Общие параметры системы
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -94,23 +92,6 @@ export function SystemSettings() {
                     </FormControl>
                     <FormDescription>
                       Отображается в отчётах и документах
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="currency"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Валюта *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="RUB" {...field} />
-                    </FormControl>
-                    <FormDescription>
-                      Валюта для финансовых операций
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

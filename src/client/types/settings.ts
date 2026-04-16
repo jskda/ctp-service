@@ -1,8 +1,6 @@
 // src/client/types/settings.ts
 export interface SystemSettings {
   companyName: string;
-  currency: string;
-  defaultColorMode: 'CMYK' | 'BLACK' | 'MULTICOLOR';
   autoArchiveDays: number;
   enableNotifications: boolean;
 }
@@ -19,8 +17,6 @@ export interface PlateTypeThreshold {
 export interface ClientSettings {
   clientId: string;
   clientName: string;
-  internalCode?: string;
-  defaultColorMode: 'CMYK' | 'BLACK' | 'MULTICOLOR';
   techNotes?: Record<string, any>;
 }
 

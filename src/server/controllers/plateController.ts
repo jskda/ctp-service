@@ -69,16 +69,16 @@ async archiveType(req: Request, res: Response) {
     const plateTypeId = typeof id === 'string' ? id : id[0];
 
     // Проверяем, есть ли движения
-    const movements = await prisma.plateMovement.count({
-      where: { plateTypeId },
-    });
+    // const movements = await prisma.plateMovement.count({
+    //   where: { plateTypeId },
+    // });
 
-    if (movements > 0) {
-      return res.status(400).json({
-        success: false,
-        error: `Cannot archive plate type with ${movements} movement(s)`,
-      });
-    }
+    // if (movements > 0) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     error: `Cannot archive plate type with ${movements} movement(s)`,
+    //   });
+    // }
 
     const plateType = await prisma.plateType.update({
       where: { id: plateTypeId },

@@ -45,6 +45,19 @@ export function useCreateOrder() {
   });
 }
 
+export function useAddProcessControl() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ orderId, data }: { orderId: string; data: any }) => {
+      const response = await apiClient.post(`/api/orders/${orderId}/process-control`, data);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+    },
+  });
+}
+
 export function useStartProcessing() {
   const queryClient = useQueryClient();
   return useMutation({

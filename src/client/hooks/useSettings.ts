@@ -4,8 +4,6 @@ import { ApiResponse } from '@/types';
 
 export interface SystemSettings {
   companyName: string;
-  currency: string;
-  defaultColorMode: 'CMYK' | 'BLACK' | 'MULTICOLOR';
   autoArchiveDays: number;
   enableNotifications: boolean;
 }

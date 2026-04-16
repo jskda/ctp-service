@@ -1,4 +1,4 @@
-// src/client/pages/ClientsPage.tsx - полностью переписываем, убирая internalCode
+// src/client/pages/ClientsPage.tsx
 import { useState } from 'react';
 import { useClients, useCreateClient, useUpdateClient, useArchiveClient } from '@/hooks/useClients';
 import { Client } from '@/types';
@@ -23,8 +23,8 @@ export function ClientsPage() {
   const [newClient, setNewClient] = useState({ name: '', techNotes: '' });
   const [error, setError] = useState<string | null>(null);
 
+  // Показываем только активных клиентов (isActive !== false)
   const activeClients = clients?.filter(c => c.isActive !== false) || [];
-  const archivedClients = clients?.filter(c => c.isActive === false) || [];
 
   const handleEdit = (client: Client) => {
     setEditingId(client.id);
@@ -81,7 +81,7 @@ export function ClientsPage() {
   };
 
   const handleArchive = async (clientId: string, clientName: string) => {
-    if (confirm(`Архивировать клиента "${clientName}"? Он не будет доступен для новых заказов, но останется в истории.`)) {
+    if (confirm(`Архивировать клиента "${clientName}"? Он не будет отображаться в списке клиентов.`)) {
       try {
         await archiveMutation.mutateAsync(clientId);
         await refetch();
@@ -101,7 +101,7 @@ export function ClientsPage() {
         <div>
           <h1 className="text-3xl font-bold">Клиенты</h1>
           <p className="text-muted-foreground mt-2">
-            Справочник клиентов. Архивированные клиенты не участвуют в новых заказах.
+            Справочник клиентов. Архивированные клиенты скрыты из списка.
           </p>
         </div>
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
@@ -153,8 +153,8 @@ export function ClientsPage() {
       {/* Активные клиенты */}
       <Card>
         <CardHeader>
-          <CardTitle>Активные клиенты</CardTitle>
-          <CardDescription>Участвуют в создании новых заказов</CardDescription>
+          <CardTitle>Клиенты</CardTitle>
+          <CardDescription>Список активных клиентов</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -232,36 +232,6 @@ export function ClientsPage() {
           </Table>
         </CardContent>
       </Card>
-
-      {/* Архивированные клиенты */}
-      {archivedClients.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-muted-foreground">Архивированные клиенты</CardTitle>
-            <CardDescription>Не участвуют в новых заказах, но остаются в истории</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Клиент</TableHead>
-                  <TableHead>Дата архивации</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {archivedClients.map((client) => (
-                  <TableRow key={client.id}>
-                    <TableCell className="text-muted-foreground">{client.name}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {client.archivedAt ? new Date(client.archivedAt).toLocaleDateString() : '—'}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }

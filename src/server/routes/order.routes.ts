@@ -4,10 +4,13 @@ import { orderController } from '../controllers/orderController';
 
 const router = Router();
 
+router.get('/export', orderController.exportOrders); 
 router.get('/', orderController.getAll);
 router.get('/:id', orderController.getById);
 router.post('/', orderController.create);
 router.post('/:id/start-processing', orderController.startProcessing);
 router.post('/:id/complete', orderController.complete);
+router.post('/:id/process-control', orderController.addProcessControl);
+
 
 export default router;

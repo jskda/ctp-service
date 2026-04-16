@@ -44,3 +44,66 @@ export function useRecordCorrection() {
     },
   });
 }
+
+export function useRecordScrapClient() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: {
+      plateTypeId: string;
+      orderId: string;
+      quantity: number;
+      writeOffCount?: number;
+      reason?: string;
+    }) => {
+      const response = await apiClient.post<ApiResponse>('/api/plates/movements/scrap/client', data);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['plate-types'] });
+      queryClient.invalidateQueries({ queryKey: ['settings', 'plate-thresholds'] });
+    },
+  });
+}
+
+export function useRecordScrapProduction() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: {
+      plateTypeId: string;
+      orderId: string;
+      quantity: number;
+      writeOffCount?: number;
+      reason?: string;
+    }) => {
+      const response = await apiClient.post<ApiResponse>('/api/plates/movements/scrap/production', data);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['plate-types'] });
+      queryClient.invalidateQueries({ queryKey: ['settings', 'plate-thresholds'] });
+    },
+  });
+}
+
+export function useRecordScrapMaterial() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: {
+      plateTypeId: string;
+      orderId: string;
+      quantity: number;
+      writeOffCount?: number;
+      reason?: string;
+    }) => {
+      const response = await apiClient.post<ApiResponse>('/api/plates/movements/scrap/material', data);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['plate-types'] });
+      queryClient.invalidateQueries({ queryKey: ['settings', 'plate-thresholds'] });
+    },
+  });
+}

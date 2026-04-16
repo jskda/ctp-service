@@ -10,13 +10,10 @@ const router = Router();
 
 router.get('/system', async (req, res) => {
   try {
-    // Возвращаем настройки по умолчанию или из БД
     res.json({
       success: true,
       data: {
         companyName: 'CTP-Service',
-        currency: 'RUB',
-        defaultColorMode: 'CMYK' as const,
         autoArchiveDays: 30,
         enableNotifications: true,
       },
@@ -32,17 +29,12 @@ router.get('/system', async (req, res) => {
 
 router.put('/system', async (req, res) => {
   try {
-    const { companyName, currency, defaultColorMode, autoArchiveDays, enableNotifications } = req.body;
-    
-    // Здесь можно сохранить настройки в БД
-    // Например, в таблицу SystemSettings
+    const { companyName, autoArchiveDays, enableNotifications } = req.body;
     
     res.json({
       success: true,
       data: {
         companyName,
-        currency,
-        defaultColorMode,
         autoArchiveDays,
         enableNotifications,
       },

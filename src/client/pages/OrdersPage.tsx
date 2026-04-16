@@ -91,9 +91,7 @@ export function OrdersPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold">Заказы</h1>
-          <p className="text-muted-foreground mt-2">
-            Управление заказами согласно спецификации (статусы: NEW → PROCESS → DONE)
-          </p>
+
         </div>
         
         <CreateOrderDialog
@@ -101,14 +99,6 @@ export function OrdersPage() {
           onCreate={handleCreateOrder}
         />
       </div>
-
-      <Alert>
-        <Info className="h-4 w-4" />
-        <AlertDescription>
-          <strong>Поля заказа:</strong> Формат пластин, количество пластин на заказ, внутренний номер заказа клиента — 
-          заполняются при создании и отображаются в карточке заказа.
-        </AlertDescription>
-      </Alert>
 
       {(!orders || orders.length === 0) ? (
         <div className="text-center py-12 border rounded-lg bg-muted/30">

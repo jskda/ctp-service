@@ -2,6 +2,44 @@
 import type { Request, Response } from 'express';
 import { prisma } from '../app';
 import { createOrderSchema } from '../utils/validation';
+import { format } from 'date-fns';
+import { ru } from 'date-fns/locale';
+
+/**
+ * Генерирует идентификатор заказа в формате ДДММЧЧММ
+ * @returns строка из 8 цифр
+ */
+function generateOrderId(): string {
+  const now = new Date();
+  const day = String(now.getDate()).padStart(2, '0');
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  return `${day}${month}${hours}${minutes}`;
+}
+
+/**
+ * Создаёт уникальный ID заказа, проверяя существование в БД.
+ * При коллизии ждёт 1 секунду и пробует снова.
+ */
+async function createUniqueOrderId(): Promise<string> {
+  let id = generateOrderId();
+  let attempts = 0;
+  const maxAttempts = 10;
+
+  while (attempts < maxAttempts) {
+    const existing = await prisma.order.findUnique({ where: { id } });
+    if (!existing) {
+      return id;
+    }
+    // Ждём 1 секунду, чтобы минута гарантированно изменилась
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    id = generateOrderId();
+    attempts++;
+  }
+
+  throw new Error('Не удалось сгенерировать уникальный ID заказа после 10 попыток');
+}
 
 export const orderController = {
   async getAll(req: Request, res: Response) {
@@ -131,11 +169,15 @@ export const orderController = {
         notesSnapshot.clientTechNotes = client.techNotes;
       }
       
+      // Генерируем уникальный ID
+      const orderId = await createUniqueOrderId();
+      
       // СОЗДАЕМ ЗАКАЗ И СПИСЫВАЕМ ПЛАСТИНЫ В ТРАНЗАКЦИИ
       const order = await prisma.$transaction(async (tx) => {
         // Создаем заказ
         const newOrder = await tx.order.create({
           data: {
+            id: orderId,
             clientId: validatedData.clientId,
             status: 'NEW',
             clientOrderNum: validatedData.clientOrderNum || null,
@@ -310,5 +352,136 @@ export const orderController = {
       console.error('Error completing order:', error);
       res.status(500).json({ success: false, error: 'Failed to complete order' });
     }
+  },
+
+  async addProcessControl(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const { measurements, speed, temperature, notes } = req.body;
+      const orderId = typeof id === 'string' ? id : id[0];
+
+      const order = await prisma.order.findUnique({ where: { id: orderId } });
+      if (!order) {
+        return res.status(404).json({ success: false, error: 'Order not found' });
+      }
+      if (order.status !== 'PROCESS') {
+        return res.status(400).json({
+          success: false,
+          error: 'Контрольные параметры можно вводить только для заказов в процессе',
+        });
+      }
+
+      const control = await prisma.processControl.create({
+        data: {
+          orderId,
+          measurements: measurements || [],
+          speed,
+          temperature,
+          notes,
+        },
+      });
+
+      await prisma.eventLog.create({
+        data: {
+          eventType: 'process.control.added',
+          context: 'order',
+          payload: {
+            orderId,
+            controlId: control.id,
+            measurements,
+            speed,
+            temperature,
+          },
+        },
+      });
+
+      res.status(201).json({ success: true, data: control });
+    } catch (error: any) {
+      console.error('Error adding process control:', error);
+      res.status(500).json({ success: false, error: 'Failed to add process control' });
+    }
+  },
+
+async exportOrders(req: Request, res: Response) {
+  try {
+    const ExcelJS = await import('exceljs');
+    // Правильный способ получить Workbook в ESM:
+    const Workbook = ExcelJS.default.Workbook;
+    const { month, year } = req.query;
+      
+      const now = new Date();
+      const targetYear = year ? parseInt(year as string) : now.getFullYear();
+      const targetMonth = month ? parseInt(month as string) - 1 : now.getMonth();
+      
+      const startDate = new Date(targetYear, targetMonth, 1);
+      const endDate = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59);
+
+      const orders = await prisma.order.findMany({
+        where: {
+          createdAt: {
+            gte: startDate,
+            lte: endDate,
+          },
+        },
+        include: {
+          client: true,
+          plateMovements: true,
+        },
+        orderBy: { createdAt: 'asc' },
+      });
+
+      const workbook = new Workbook();
+      const worksheet = workbook.addWorksheet(`Заказы ${format(startDate, 'LLLL yyyy', { locale: ru })}`);
+
+      worksheet.columns = [
+      { header: 'Дата', key: 'date', width: 14 },
+      { header: 'Номер заказа', key: 'orderNumber', width: 14 },
+      { header: 'Клиент', key: 'clientName', width: 35 },
+      { header: 'Формат', key: 'plateFormat', width: 14 },
+      { header: 'Количество', key: 'totalPlates', width: 16 },
+      { header: 'Списания', key: 'scrapped', width: 16 },
+    ];
+
+    // Убираем всё оформление заголовка — делаем обычный текст
+    const headerRow = worksheet.getRow(1);
+    headerRow.font = { bold: false };
+    headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
+    // Без заливки и границ
+
+    // Добавляем данные
+    orders.forEach(order => {
+      const totalScrapped = order.plateMovements
+        .filter(m => m.reason.startsWith('SCRAP_'))
+        .reduce((sum, m) => sum + Math.abs(m.quantity), 0);
+
+      worksheet.addRow({
+        date: format(order.createdAt, 'dd.MM.yyyy'),
+        orderNumber: `№${order.id}`,
+        clientName: order.client?.name || '',
+        plateFormat: order.plateFormat,
+        totalPlates: order.totalPlates,
+        scrapped: totalScrapped > 0 ? totalScrapped : '',
+      });
+    });
+
+    // Выравнивание по центру для всех ячеек с данными
+    const dataRows = worksheet.rowCount;
+    for (let i = 2; i <= dataRows; i++) {
+      worksheet.getRow(i).alignment = { horizontal: 'center', vertical: 'middle' };
+      // Границы не добавляем
+    }
+
+    // Ширина уже задана в columns, автоподбор не требуется
+
+    const fileName = `orders_${targetYear}_${String(targetMonth + 1).padStart(2, '0')}.xlsx`;
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    console.error('Error exporting orders:', error);
+    res.status(500).json({ success: false, error: 'Failed to export orders' });
+  }
   },
 };

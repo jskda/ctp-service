@@ -105,8 +105,6 @@ export function HomePage() {
           </Card>
         </Link>
 
-        
-
         <Link to="/settings">
           <Card>
             <CardHeader>

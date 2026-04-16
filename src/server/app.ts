@@ -5,6 +5,7 @@ import orderRoutes from './routes/order.routes';
 import clientRoutes from './routes/client.routes';
 import plateRoutes from './routes/plate.routes';
 import settingsRoutes from './routes/settingsRoutes';
+import analyticsRoutes from './routes/analytics.routes';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -18,6 +19,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/clients', clientRoutes);
 app.use('/api/plates', plateRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // Обработка 404
 app.use((req, res) => {
