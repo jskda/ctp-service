@@ -22,6 +22,7 @@ export const createPlateTypeSchema = z.object({
   manufacturer: z.string().min(1, 'Производитель обязателен'),
   otherParams: z.any().optional(),
   minStockThreshold: z.number().int().min(0).default(0),
+  areaSqm: z.number().positive().optional(),
 });
 
 export const updatePlateTypeThresholdSchema = z.object({

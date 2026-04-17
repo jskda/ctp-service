@@ -67,7 +67,10 @@ export function AnalyticsPage() {
     link.click();
   };
 
-  const chartData = controls?.map(c => {
+  const chartData = (controls || [])
+  .slice() // копируем
+  .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+  .map((c) => {
     const m75 = c.measurements?.find((m: any) => m.target === 75);
     const m80 = c.measurements?.find((m: any) => m.target === 80);
     return {
@@ -78,7 +81,7 @@ export function AnalyticsPage() {
       скорость: c.speed,
       температура: c.temperature,
     };
-  }).reverse() || [];
+  });
 
   const scrapData = summary ? [
     { name: 'Клиент', value: Math.abs(summary.scrap.CLIENT) },

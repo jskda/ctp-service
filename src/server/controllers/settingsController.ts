@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { prisma } from '../app';
+import { prisma } from '../prismaClient';
 
 const SYSTEM_SETTINGS_KEY = 'system';
 

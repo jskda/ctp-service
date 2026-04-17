@@ -4,18 +4,31 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Gauge, Thermometer, Plus, Trash2 } from 'lucide-react';
 import { useAddProcessControl } from '@/hooks/useOrders';
 
+// actual теперь опциональный
 const measurementSchema = z.object({
   target: z.coerce.number().min(0).max(100),
-  actual: z.coerce.number().min(0).max(100),
+  actual: z.coerce.number().min(0).max(100).optional(),
 });
 
 const schema = z.object({
@@ -36,15 +49,15 @@ export function ProcessControlDialog({ orderId, disabled }: ProcessControlDialog
   const [open, setOpen] = useState(false);
   const addControl = useAddProcessControl();
 
-const form = useForm<FormValues>({
-  resolver: zodResolver(schema),
-  defaultValues: {
-    measurements: [],   // пустой массив
-    speed: undefined,
-    temperature: undefined,
-    notes: '',
-  },
-});
+  const form = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      measurements: [],
+      speed: undefined,
+      temperature: undefined,
+      notes: '',
+    },
+  });
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -52,8 +65,13 @@ const form = useForm<FormValues>({
   });
 
   const onSubmit = async (data: FormValues) => {
+    // Фильтруем замеры, где actual не заполнен (они не будут отправлены)
+    const filteredMeasurements = data.measurements.filter((m) => m.actual !== undefined);
     try {
-      await addControl.mutateAsync({ orderId, data });
+      await addControl.mutateAsync({
+        orderId,
+        data: { ...data, measurements: filteredMeasurements },
+      });
       form.reset();
       setOpen(false);
     } catch (error: any) {
@@ -76,69 +94,66 @@ const form = useForm<FormValues>({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {/* Список замеров */}
             <div className="space-y-3">
-  <FormLabel>Замеры растра</FormLabel>
-  
-  {fields.length === 0 ? (
-    <p className="text-sm text-muted-foreground">Нет добавленных замеров</p>
-  ) : (
-    fields.map((field, index) => (
-      <div key={field.id} className="flex items-center gap-2">
-        <FormField
-          control={form.control}
-          name={`measurements.${index}.target`}
-          render={({ field }) => (
-            <FormItem className="flex-1">
-              <FormControl>
-                <Input type="number" step="1" placeholder="Цель %" {...field} />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-        <span>→</span>
-        <FormField
-          control={form.control}
-          name={`measurements.${index}.actual`}
-          render={({ field }) => (
-            <FormItem className="flex-1">
-              <FormControl>
-                <Input
-                  type="number"
-                  step="0.1"
-                  placeholder="Факт %"
-                  {...field}
-                  value={field.value ?? ''}
-                  onChange={(e) => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))}
-                />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={() => remove(index)}
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      </div>
-    ))
-  )}
+              <FormLabel>Замеры растра</FormLabel>
 
-  <Button
-    type="button"
-    variant="outline"
-    size="sm"
-    onClick={() => append({ target: 75, actual: undefined })}
-  >
-    <Plus className="h-4 w-4 mr-1" />
-    Добавить замер
-  </Button>
-</div>
+              {fields.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Нет добавленных замеров</p>
+              ) : (
+                fields.map((field, index) => (
+                  <div key={field.id} className="flex items-center gap-2">
+                    <FormField
+                      control={form.control}
+                      name={`measurements.${index}.target`}
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormControl>
+                            <Input type="number" step="1" placeholder="Цель %" {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <span>→</span>
+                    <FormField
+                      control={form.control}
+                      name={`measurements.${index}.actual`}
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormControl>
+                            <Input
+                              type="number"
+                              step="0.1"
+                              placeholder="Факт %"
+                              {...field}
+                              value={field.value ?? ''}
+                              onChange={(e) =>
+                                field.onChange(
+                                  e.target.value === '' ? undefined : Number(e.target.value)
+                                )
+                              }
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))
+              )}
 
-            {/* Скорость */}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => append({ target: 75, actual: undefined })}
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Добавить замер
+              </Button>
+            </div>
+
             <FormField
               control={form.control}
               name="speed"
@@ -156,7 +171,9 @@ const form = useForm<FormValues>({
                       placeholder="1.2"
                       {...field}
                       value={field.value ?? ''}
-                      onChange={(e) => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))}
+                      onChange={(e) =>
+                        field.onChange(e.target.value === '' ? undefined : Number(e.target.value))
+                      }
                     />
                   </FormControl>
                   <FormMessage />
@@ -164,7 +181,6 @@ const form = useForm<FormValues>({
               )}
             />
 
-            {/* Температура */}
             <FormField
               control={form.control}
               name="temperature"
@@ -181,7 +197,9 @@ const form = useForm<FormValues>({
                       placeholder="23.5"
                       {...field}
                       value={field.value ?? ''}
-                      onChange={(e) => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))}
+                      onChange={(e) =>
+                        field.onChange(e.target.value === '' ? undefined : Number(e.target.value))
+                      }
                     />
                   </FormControl>
                   <FormMessage />
@@ -189,7 +207,6 @@ const form = useForm<FormValues>({
               )}
             />
 
-            {/* Примечание */}
             <FormField
               control={form.control}
               name="notes"

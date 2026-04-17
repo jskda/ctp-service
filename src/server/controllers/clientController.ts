@@ -1,6 +1,6 @@
 // src/server/controllers/clientController.ts
 import type { Request, Response } from 'express';
-import { prisma } from '../app';
+import { prisma } from '../prismaClient';
 import { createClientSchema } from '../utils/validation';
 
 export const clientController = {

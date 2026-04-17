@@ -1,6 +1,5 @@
 import type { Request, Response } from 'express';
-import { prisma } from '../app';
-import { Prisma } from '@prisma/client';
+import { prisma } from '../prismaClient';
 
 export const analyticsController = {
   // GET /api/analytics/process-controls?from=...&to=...&plateFormat=...

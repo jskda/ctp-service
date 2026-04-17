@@ -3,7 +3,8 @@ import { SystemSettings } from '@/components/settings/SystemSettings';
 import { ClientSettings } from '@/components/settings/ClientSettings';
 import { StockThresholdSettings } from '@/components/settings/StockThresholdSettings';
 import { EventLogSettings } from '@/components/settings/EventLogSettings';
-import { ReportsSettings } from '@/components/settings/ReportsSettings'; // новый импорт
+import { ReportsSettings } from '@/components/settings/ReportsSettings';
+import { DeveloperSettings } from '@/components/settings/DeveloperSettings';
 
 export function SettingsPage() {
   return (
@@ -11,8 +12,9 @@ export function SettingsPage() {
       <SystemSettings />
       <ClientSettings />
       <StockThresholdSettings />
+      <DeveloperSettings />
       <EventLogSettings />
-      <ReportsSettings />   {/* добавлено */}
+      <ReportsSettings />
     </SettingsLayout>
   );
 }

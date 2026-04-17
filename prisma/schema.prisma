@@ -20,7 +20,6 @@ model Client {
   updatedAt        DateTime @updatedAt
 
   @@index([isActive])
-  // Удаляем @@index([internalCode])
 }
 
 model SystemSetting {
@@ -36,6 +35,7 @@ model PlateType {
   manufacturer      String
   otherParams       Json?
   minStockThreshold Int             @default(0)
+  areaSqm           Float?
   isActive          Boolean         @default(true)
   archivedAt        DateTime?
   movements         PlateMovement[]
@@ -46,33 +46,37 @@ model PlateType {
 }
 
 model Order {
-  id              String        @id
-  clientId        String
-  client          Client        @relation(fields: [clientId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  status          OrderStatus   @default(NEW)
-  clientOrderNum  String?
-  plateFormat     String        @default("")
-  totalPlates     Int           @default(0)
-  notesSnapshot   Json?
-  plateMovements  PlateMovement[]
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  processControls ProcessControl[]
+  id                String           @id
+  clientId          String
+  client            Client           @relation(fields: [clientId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  status            OrderStatus      @default(NEW)
+  clientOrderNum    String?
+  plateFormat       String           @default("")
+  totalPlates       Int              @default(0)
+  notesSnapshot     Json?
+  plateMovements    PlateMovement[]
+  processControls   ProcessControl[]
+  developerBatchId  String?
+  developerBatch    DeveloperBatch?  @relation(fields: [developerBatchId], references: [id])
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
 
   @@index([clientOrderNum])
   @@index([status])
 }
 
 model ProcessControl {
-  id            String   @id @default(cuid())
-  orderId       String
-  order         Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  measurements  Json     @default("[]")
-  speed         Float?
-  temperature   Float?
-  notes         String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                String           @id @default(cuid())
+  orderId           String
+  order             Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  measurements      Json             @default("[]")
+  speed             Float?
+  temperature       Float?
+  notes             String?
+  developerBatchId  String?
+  developerBatch    DeveloperBatch?  @relation(fields: [developerBatchId], references: [id])
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
 }
 
 model PlateMovement {
@@ -87,8 +91,37 @@ model PlateMovement {
   order          Order?         @relation(fields: [orderId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   writeOffCount  Int?
   createdAt      DateTime       @default(now())
+
   @@index([plateTypeId])
   @@index([orderId])
+}
+
+model EventLog {
+  id          String   @id @default(cuid())
+  eventType   String
+  context     String
+  payload     Json
+  timestamp   DateTime @default(now())
+
+  @@index([timestamp])
+}
+
+model DeveloperBatch {
+  id               String           @id @default(cuid())
+  startedAt        DateTime         @default(now())
+  volumeLiters     Float
+  concentrateName  String?
+  concentrateRatio String?
+  maxAreaSqm       Float?
+  notes            String?
+  isActive         Boolean          @default(true)
+  endedAt          DateTime?
+
+  orders           Order[]
+  processControls  ProcessControl[]
+
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 }
 
 enum OrderStatus {
@@ -119,14 +152,4 @@ enum Responsibility {
   CLIENT
   PRODUCTION
   MATERIALS
-}
-
-model EventLog {
-  id          String   @id @default(cuid())
-  eventType   String
-  context     String
-  payload     Json
-  timestamp   DateTime @default(now())
-
-  @@index([timestamp])
 }

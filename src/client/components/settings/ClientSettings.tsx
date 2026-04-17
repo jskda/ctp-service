@@ -1,6 +1,6 @@
 // src/client/components/settings/ClientSettings.tsx
 import { useState } from 'react';
-import { Edit, Save, X, FileText, Hash } from 'lucide-react';
+import { Edit, Save, X, FileText } from 'lucide-react';
 import { useClients } from '@/hooks/useClients';
 import { useUpdateClient } from '@/hooks/useClients';
 import { Button } from '@/components/ui/button';
@@ -16,32 +16,28 @@ export function ClientSettings() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
-    internalCode: '',
     techNotes: '',
   });
 
-  const handleEdit = (clientId: string, clientName: string, internalCode?: string | null, techNotes?: string[]) => {
+  const handleEdit = (clientId: string, clientName: string, techNotes?: string[]) => {
     setEditingId(clientId);
     setFormData({
       name: clientName,
-      internalCode: internalCode || '',
       techNotes: techNotes ? techNotes.join('\n') : '',
     });
   };
 
   const handleSave = async (clientId: string) => {
     try {
-      // Разбиваем текст на строки и фильтруем пустые
       const techNotes = formData.techNotes
         .split('\n')
-        .map(line => line.trim())
-        .filter(line => line.length > 0);
-      
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0);
+
       await updateMutation.mutateAsync({
         id: clientId,
         data: {
           name: formData.name,
-          internalCode: formData.internalCode || null,
           techNotes: techNotes.length > 0 ? techNotes : undefined,
         },
       });
@@ -54,7 +50,7 @@ export function ClientSettings() {
 
   const handleCancel = () => {
     setEditingId(null);
-    setFormData({ name: '', internalCode: '', techNotes: '' });
+    setFormData({ name: '', techNotes: '' });
   };
 
   if (isLoading) {
@@ -78,7 +74,7 @@ export function ClientSettings() {
             Настройки клиентов
           </CardTitle>
           <CardDescription>
-            Управление данными клиентов, внутренними кодами и техническими заметками
+            Управление данными клиентов и техническими заметками
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -87,7 +83,6 @@ export function ClientSettings() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Клиент</TableHead>
-                  <TableHead>Внутренний код</TableHead>
                   <TableHead>Технические заметки</TableHead>
                   <TableHead className="text-right">Действия</TableHead>
                 </TableRow>
@@ -106,23 +101,6 @@ export function ClientSettings() {
                           />
                         ) : (
                           client.name
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {isEditing ? (
-                          <Input
-                            value={formData.internalCode}
-                            onChange={(e) => setFormData({ ...formData, internalCode: e.target.value })}
-                            placeholder="Внутренний код клиента"
-                            className="w-32"
-                          />
-                        ) : client.internalCode ? (
-                          <span className="inline-flex items-center gap-1 text-sm font-mono">
-                            <Hash className="h-3 w-3" />
-                            {client.internalCode}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
                         )}
                       </TableCell>
                       <TableCell>
@@ -156,11 +134,7 @@ export function ClientSettings() {
                             >
                               <Save className="h-4 w-4" />
                             </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={handleCancel}
-                            >
+                            <Button size="sm" variant="ghost" onClick={handleCancel}>
                               <X className="h-4 w-4" />
                             </Button>
                           </div>
@@ -168,7 +142,7 @@ export function ClientSettings() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleEdit(client.id, client.name, client.internalCode, client.techNotes)}
+                            onClick={() => handleEdit(client.id, client.name, client.techNotes)}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>

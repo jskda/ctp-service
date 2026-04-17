@@ -12,27 +12,8 @@ export interface Client {
   id: string;
   name: string;
   techNotes?: string[] | null;
-  createdAt: string;
-  updatedAt: string;
   isActive?: boolean;
   archivedAt?: string | null;
-}
-
-export interface Order {
-  id: string;
-  clientId: string;
-  client?: Client;
-  status: OrderStatus;
-  clientOrderNum?: string | null;
-  plateTypeId?: string | null;
-  plateType?: PlateType;
-  plateFormat: string;
-  totalPlates: number;
-  notesSnapshot?: {
-    clientTechNotes?: string[];
-    [key: string]: any;
-  };
-  plateMovements?: PlateMovement[];
   createdAt: string;
   updatedAt: string;
 }
@@ -43,8 +24,28 @@ export interface PlateType {
   manufacturer: string;
   otherParams?: any;
   minStockThreshold: number;
+  areaSqm?: number | null;
   currentStock?: number;
   isDeficit?: boolean;
+  isActive?: boolean;
+  archivedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Order {
+  id: string;
+  clientId: string;
+  client?: Client;
+  status: OrderStatus;
+  clientOrderNum?: string | null;
+  plateFormat: string;
+  totalPlates: number;
+  notesSnapshot?: {
+    clientTechNotes?: string[];
+    [key: string]: any;
+  };
+  plateMovements?: PlateMovement[];
   createdAt: string;
   updatedAt: string;
 }
@@ -61,6 +62,31 @@ export interface PlateMovement {
   order?: Order;
   writeOffCount?: number | null;
   createdAt: string;
+}
+
+export interface DeveloperBatch {
+  id: string;
+  startedAt: string;
+  volumeLiters: number;
+  concentrateName?: string | null;
+  concentrateRatio?: string | null;
+  maxAreaSqm?: number | null;
+  notes?: string | null;
+  isActive: boolean;
+  endedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DeveloperStatus extends DeveloperBatch {
+  totalArea: number;
+  usagePercent: number | null;
+  rasterDeviation: {
+    avg75: number;
+    avg80: number;
+    status: 'normal' | 'warning';
+  };
+  orderCount?: number;
 }
 
 export interface PlateTypeThreshold {
@@ -87,10 +113,4 @@ export interface ApiResponse<T = any> {
   error?: string;
   details?: any;
   message?: string;
-}
-
-export interface OrderStats {
-  totalPlates: number;
-  usedPlates: number;
-  remainingPlates: number;
 }

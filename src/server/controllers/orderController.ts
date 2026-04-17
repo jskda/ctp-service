@@ -1,14 +1,10 @@
 // src/server/controllers/orderController.ts
 import type { Request, Response } from 'express';
-import { prisma } from '../app';
+import { prisma } from '../prismaClient';
 import { createOrderSchema } from '../utils/validation';
 import { format } from 'date-fns';
 import { ru } from 'date-fns/locale';
 
-/**
- * Генерирует идентификатор заказа в формате ДДММЧЧММ
- * @returns строка из 8 цифр
- */
 function generateOrderId(): string {
   const now = new Date();
   const day = String(now.getDate()).padStart(2, '0');
@@ -18,10 +14,6 @@ function generateOrderId(): string {
   return `${day}${month}${hours}${minutes}`;
 }
 
-/**
- * Создаёт уникальный ID заказа, проверяя существование в БД.
- * При коллизии ждёт 1 секунду и пробует снова.
- */
 async function createUniqueOrderId(): Promise<string> {
   let id = generateOrderId();
   let attempts = 0;
@@ -32,7 +24,6 @@ async function createUniqueOrderId(): Promise<string> {
     if (!existing) {
       return id;
     }
-    // Ждём 1 секунду, чтобы минута гарантированно изменилась
     await new Promise(resolve => setTimeout(resolve, 1000));
     id = generateOrderId();
     attempts++;
@@ -136,7 +127,6 @@ export const orderController = {
         return res.status(404).json({ success: false, error: 'Client not found' });
       }
       
-      // НАХОДИМ ТИП ПЛАСТИНЫ ПО ФОРМАТУ
       const plateType = await prisma.plateType.findFirst({
         where: { format: validatedData.plateFormat, isActive: true },
       });
@@ -148,7 +138,6 @@ export const orderController = {
         });
       }
       
-      // ПРОВЕРЯЕМ ТЕКУЩИЙ ОСТАТОК ДО СПИСАНИЯ
       const movementsBefore = await prisma.plateMovement.aggregate({
         where: { plateTypeId: plateType.id },
         _sum: { quantity: true },
@@ -169,12 +158,14 @@ export const orderController = {
         notesSnapshot.clientTechNotes = client.techNotes;
       }
       
-      // Генерируем уникальный ID
+      // Находим активную партию проявителя
+      const activeBatch = await prisma.developerBatch.findFirst({
+        where: { isActive: true },
+      });
+      
       const orderId = await createUniqueOrderId();
       
-      // СОЗДАЕМ ЗАКАЗ И СПИСЫВАЕМ ПЛАСТИНЫ В ТРАНЗАКЦИИ
       const order = await prisma.$transaction(async (tx) => {
-        // Создаем заказ
         const newOrder = await tx.order.create({
           data: {
             id: orderId,
@@ -184,10 +175,10 @@ export const orderController = {
             plateFormat: validatedData.plateFormat,
             totalPlates: validatedData.totalPlates,
             notesSnapshot: Object.keys(notesSnapshot).length > 0 ? notesSnapshot : undefined,
+            developerBatchId: activeBatch?.id,
           },
         });
         
-        // Создаем движение списания (ОТРИЦАТЕЛЬНОЕ количество)
         const movement = await tx.plateMovement.create({
           data: {
             plateTypeId: plateType.id,
@@ -205,7 +196,6 @@ export const orderController = {
         return newOrder;
       });
       
-      // ПРОВЕРЯЕМ ОСТАТОК ПОСЛЕ СПИСАНИЯ
       const movementsAfter = await prisma.plateMovement.aggregate({
         where: { plateTypeId: plateType.id },
         _sum: { quantity: true },
@@ -371,6 +361,10 @@ export const orderController = {
         });
       }
 
+      const activeBatch = await prisma.developerBatch.findFirst({
+        where: { isActive: true },
+      });
+
       const control = await prisma.processControl.create({
         data: {
           orderId,
@@ -378,6 +372,7 @@ export const orderController = {
           speed,
           temperature,
           notes,
+          developerBatchId: activeBatch?.id,
         },
       });
 
@@ -402,12 +397,11 @@ export const orderController = {
     }
   },
 
-async exportOrders(req: Request, res: Response) {
-  try {
-    const ExcelJS = await import('exceljs');
-    // Правильный способ получить Workbook в ESM:
-    const Workbook = ExcelJS.default.Workbook;
-    const { month, year } = req.query;
+  async exportOrders(req: Request, res: Response) {
+    try {
+      const ExcelJS = await import('exceljs');
+      const Workbook = ExcelJS.default.Workbook;
+      const { month, year } = req.query;
       
       const now = new Date();
       const targetYear = year ? parseInt(year as string) : now.getFullYear();
@@ -434,54 +428,47 @@ async exportOrders(req: Request, res: Response) {
       const worksheet = workbook.addWorksheet(`Заказы ${format(startDate, 'LLLL yyyy', { locale: ru })}`);
 
       worksheet.columns = [
-      { header: 'Дата', key: 'date', width: 14 },
-      { header: 'Номер заказа', key: 'orderNumber', width: 14 },
-      { header: 'Клиент', key: 'clientName', width: 35 },
-      { header: 'Формат', key: 'plateFormat', width: 14 },
-      { header: 'Количество', key: 'totalPlates', width: 16 },
-      { header: 'Списания', key: 'scrapped', width: 16 },
-    ];
+        { header: 'Дата', key: 'date', width: 14 },
+        { header: 'Номер заказа', key: 'orderNumber', width: 14 },
+        { header: 'Клиент', key: 'clientName', width: 35 },
+        { header: 'Формат', key: 'plateFormat', width: 14 },
+        { header: 'Количество', key: 'totalPlates', width: 16 },
+        { header: 'Списания', key: 'scrapped', width: 16 },
+      ];
 
-    // Убираем всё оформление заголовка — делаем обычный текст
-    const headerRow = worksheet.getRow(1);
-    headerRow.font = { bold: false };
-    headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
-    // Без заливки и границ
+      const headerRow = worksheet.getRow(1);
+      headerRow.font = { bold: false };
+      headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
 
-    // Добавляем данные
-    orders.forEach(order => {
-      const totalScrapped = order.plateMovements
-        .filter(m => m.reason.startsWith('SCRAP_'))
-        .reduce((sum, m) => sum + Math.abs(m.quantity), 0);
+      orders.forEach(order => {
+        const totalScrapped = order.plateMovements
+          .filter(m => m.reason.startsWith('SCRAP_'))
+          .reduce((sum, m) => sum + Math.abs(m.quantity), 0);
 
-      worksheet.addRow({
-        date: format(order.createdAt, 'dd.MM.yyyy'),
-        orderNumber: `№${order.id}`,
-        clientName: order.client?.name || '',
-        plateFormat: order.plateFormat,
-        totalPlates: order.totalPlates,
-        scrapped: totalScrapped > 0 ? totalScrapped : '',
+        worksheet.addRow({
+          date: format(order.createdAt, 'dd.MM.yyyy'),
+          orderNumber: `№${order.id}`,
+          clientName: order.client?.name || '',
+          plateFormat: order.plateFormat,
+          totalPlates: order.totalPlates,
+          scrapped: totalScrapped > 0 ? totalScrapped : '',
+        });
       });
-    });
 
-    // Выравнивание по центру для всех ячеек с данными
-    const dataRows = worksheet.rowCount;
-    for (let i = 2; i <= dataRows; i++) {
-      worksheet.getRow(i).alignment = { horizontal: 'center', vertical: 'middle' };
-      // Границы не добавляем
+      const dataRows = worksheet.rowCount;
+      for (let i = 2; i <= dataRows; i++) {
+        worksheet.getRow(i).alignment = { horizontal: 'center', vertical: 'middle' };
+      }
+
+      const fileName = `orders_${targetYear}_${String(targetMonth + 1).padStart(2, '0')}.xlsx`;
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+
+      await workbook.xlsx.write(res);
+      res.end();
+    } catch (error) {
+      console.error('Error exporting orders:', error);
+      res.status(500).json({ success: false, error: 'Failed to export orders' });
     }
-
-    // Ширина уже задана в columns, автоподбор не требуется
-
-    const fileName = `orders_${targetYear}_${String(targetMonth + 1).padStart(2, '0')}.xlsx`;
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-
-    await workbook.xlsx.write(res);
-    res.end();
-  } catch (error) {
-    console.error('Error exporting orders:', error);
-    res.status(500).json({ success: false, error: 'Failed to export orders' });
-  }
   },
 };

@@ -25,9 +25,9 @@ export function PlatesPage() {
   const correctionMutation = useRecordCorrection();
   
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ format: '', manufacturer: '', minStockThreshold: 0 });
+  const [formData, setFormData] = useState({ format: '', manufacturer: '', minStockThreshold: 0, areaSqm: '' });
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [newPlateType, setNewPlateType] = useState({ format: '', manufacturer: '', minStockThreshold: 0 });
+  const [newPlateType, setNewPlateType] = useState({ format: '', manufacturer: '', minStockThreshold: 0, areaSqm: '' });
   const [error, setError] = useState<string | null>(null);
   
   const [purchaseDialogOpen, setPurchaseDialogOpen] = useState(false);
@@ -61,10 +61,11 @@ export function PlatesPage() {
   const handleEdit = (plateType: PlateType) => {
     setEditingId(plateType.id);
     setFormData({
-      format: plateType.format,
-      manufacturer: plateType.manufacturer,
-      minStockThreshold: plateType.minStockThreshold,
-    });
+  format: plateType.format,
+  manufacturer: plateType.manufacturer,
+  minStockThreshold: plateType.minStockThreshold,
+  areaSqm: plateType.areaSqm?.toString() || '',
+});
   };
 
   const handleSave = async (id: string) => {
@@ -74,13 +75,14 @@ export function PlatesPage() {
     }
     try {
       await updateMutation.mutateAsync({
-        id,
-        data: {
-          format: formData.format.trim(),
-          manufacturer: formData.manufacturer.trim(),
-          minStockThreshold: formData.minStockThreshold,
-        },
-      });
+  id,
+  data: {
+    format: formData.format.trim(),
+    manufacturer: formData.manufacturer.trim(),
+    minStockThreshold: formData.minStockThreshold,
+    areaSqm: formData.areaSqm ? Number(formData.areaSqm) : undefined,
+  },
+});
       setEditingId(null);
       setError(null);
       await refreshData();
@@ -95,11 +97,12 @@ export function PlatesPage() {
       return;
     }
     try {
-      await createMutation.mutateAsync({
-        format: newPlateType.format.trim(),
-        manufacturer: newPlateType.manufacturer.trim(),
-        minStockThreshold: newPlateType.minStockThreshold,
-      });
+await createMutation.mutateAsync({
+  format: newPlateType.format.trim(),
+  manufacturer: newPlateType.manufacturer.trim(),
+  minStockThreshold: newPlateType.minStockThreshold,
+  areaSqm: newPlateType.areaSqm ? Number(newPlateType.areaSqm) : undefined,
+});
       setCreateDialogOpen(false);
       setNewPlateType({ format: '', manufacturer: '', minStockThreshold: 0 });
       setError(null);
@@ -269,6 +272,7 @@ export function PlatesPage() {
                   <TableHead>Производитель</TableHead>
                   <TableHead className="text-center">Текущий остаток</TableHead>
                   <TableHead className="text-center">Мин. остаток</TableHead>
+                  <TableHead className="text-center">Площадь (м²)</TableHead>
                   <TableHead>Статус</TableHead>
                   <TableHead className="text-right">Действия</TableHead>
                 </TableRow>
@@ -390,6 +394,20 @@ export function PlatesPage() {
                           </div>
                         )}
                       </TableCell>
+                      <TableCell className="text-center">
+  {isEditing ? (
+    <Input
+      type="number"
+      step="0.01"
+      value={formData.areaSqm}
+      onChange={(e) => setFormData({ ...formData, areaSqm: e.target.value })}
+      className="w-24"
+      placeholder="м²"
+    />
+  ) : (
+    plateType.areaSqm ? `${plateType.areaSqm}` : '—'
+  )}
+</TableCell>
                     </TableRow>
                   );
                 })}
@@ -429,6 +447,16 @@ export function PlatesPage() {
                 placeholder="Количество пластин"
               />
             </div>
+            <div>
+  <label className="text-sm font-medium">Площадь одной пластины (м²)</label>
+  <Input
+    type="number"
+    step="0.01"
+    value={newPlateType.areaSqm}
+    onChange={(e) => setNewPlateType({ ...newPlateType, areaSqm: e.target.value })}
+    placeholder="0.824"
+  />
+</div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setPurchaseDialogOpen(false)}>Отмена</Button>

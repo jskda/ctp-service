@@ -1,6 +1,6 @@
 // src/server/controllers/plateController.ts
 import type { Request, Response } from 'express';
-import { prisma } from '../app';
+import { prisma } from '../prismaClient';
 import {
   createPlateTypeSchema,
   updatePlateTypeThresholdSchema,
@@ -17,139 +17,111 @@ import {
 } from '../utils/validation';
 
 export const plateController = {
-  // --- PlateType operations ---
-
-  // GET /api/plates/types/active - только активные для выбора
-// src/server/controllers/plateController.ts - исправляем getActiveTypes
-async getActiveTypes(req: Request, res: Response) {
-  try {
-    const plateTypes = await prisma.plateType.findMany({
-      where: { isActive: true },
-      orderBy: { format: 'asc' },
-    });
-    
-    // Вычисляем остатки для каждого типа
-    const plateTypesWithStock = await Promise.all(
-      plateTypes.map(async (plateType) => {
-        const movements = await prisma.plateMovement.aggregate({
-          where: { plateTypeId: plateType.id },
-          _sum: { quantity: true },
-        });
-        
-        const currentStock = movements._sum.quantity || 0;
-        const isDeficit = currentStock < plateType.minStockThreshold;
-        
-        console.log(`Plate type ${plateType.format}: current stock = ${currentStock}`);
-        
-        return {
-          ...plateType,
-          currentStock,
-          isDeficit,
-        };
-      })
-    );
-    
-    res.json({
-      success: true,
-      data: plateTypesWithStock,
-    });
-  } catch (error) {
-    console.error('Error fetching active plate types:', error);
-    res.status(500).json({ success: false, error: 'Failed to fetch active plate types' });
-  }
-},
-
-// POST /api/plates/types - создание типа пластины (уже есть, нужно убедиться что isActive=true по умолчанию)
-// (createType уже существует, он автоматически проставит isActive: true)
-
-// DELETE /api/plates/types/:id - мягкое удаление (деактивация)
-async archiveType(req: Request, res: Response) {
-  try {
-    const { id } = req.params;
-    const plateTypeId = typeof id === 'string' ? id : id[0];
-
-    // Проверяем, есть ли движения
-    // const movements = await prisma.plateMovement.count({
-    //   where: { plateTypeId },
-    // });
-
-    // if (movements > 0) {
-    //   return res.status(400).json({
-    //     success: false,
-    //     error: `Cannot archive plate type with ${movements} movement(s)`,
-    //   });
-    // }
-
-    const plateType = await prisma.plateType.update({
-      where: { id: plateTypeId },
-      data: { isActive: false, archivedAt: new Date() },
-    });
-
-    await prisma.eventLog.create({
-      data: {
-        eventType: 'plate.type.archived',
-        context: 'stock',
-        payload: { plateTypeId: plateType.id, format: plateType.format },
-      },
-    });
-
-    res.json({ success: true, data: plateType });
-  } catch (error) {
-    if (error.code === 'P2025') {
-      return res.status(404).json({ success: false, error: 'Plate type not found' });
+  async getActiveTypes(req: Request, res: Response) {
+    try {
+      const plateTypes = await prisma.plateType.findMany({
+        where: { isActive: true },
+        orderBy: { format: 'asc' },
+      });
+      
+      const plateTypesWithStock = await Promise.all(
+        plateTypes.map(async (plateType) => {
+          const movements = await prisma.plateMovement.aggregate({
+            where: { plateTypeId: plateType.id },
+            _sum: { quantity: true },
+          });
+          
+          const currentStock = movements._sum.quantity || 0;
+          const isDeficit = currentStock < plateType.minStockThreshold;
+          
+          console.log(`Plate type ${plateType.format}: current stock = ${currentStock}`);
+          
+          return {
+            ...plateType,
+            currentStock,
+            isDeficit,
+          };
+        })
+      );
+      
+      res.json({
+        success: true,
+        data: plateTypesWithStock,
+      });
+    } catch (error) {
+      console.error('Error fetching active plate types:', error);
+      res.status(500).json({ success: false, error: 'Failed to fetch active plate types' });
     }
-    res.status(500).json({ success: false, error: 'Failed to archive plate type' });
-  }
-},
+  },
 
-// src/server/controllers/plateController.ts - исправляем getAllTypes
-async getAllTypes(req: Request, res: Response) {
-  try {
-    const plateTypes = await prisma.plateType.findMany({
-      where: { isActive: true },
-      orderBy: { format: 'asc' },
-    });
-    
-    // Вычисляем остатки для каждого типа
-    const plateTypesWithStock = await Promise.all(
-      plateTypes.map(async (plateType) => {
-        // Суммируем все движения по этому типу пластин
-        const movements = await prisma.plateMovement.aggregate({
-          where: { plateTypeId: plateType.id },
-          _sum: { quantity: true },
-        });
-        
-        // quantity может быть отрицательным (списание) или положительным (поступление)
-        const currentStock = movements._sum.quantity || 0;
-        const isDeficit = currentStock < plateType.minStockThreshold;
-        
-        console.log(`Plate ${plateType.format}: total movements sum = ${currentStock}`);
-        
-        return {
-          ...plateType,
-          currentStock,
-          isDeficit,
-        };
-      })
-    );
-    
-    res.json({
-      success: true,
-      data: plateTypesWithStock,
-      count: plateTypesWithStock.length,
-    });
-  } catch (error) {
-    console.error('Error fetching plate types:', error);
-    res.status(500).json({ success: false, error: 'Failed to fetch plate types' });
-  }
-},
+  async archiveType(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const plateTypeId = typeof id === 'string' ? id : id[0];
 
-  // GET /api/plates/types/:id - получить тип пластины по ID
+      const plateType = await prisma.plateType.update({
+        where: { id: plateTypeId },
+        data: { isActive: false, archivedAt: new Date() },
+      });
+
+      await prisma.eventLog.create({
+        data: {
+          eventType: 'plate.type.archived',
+          context: 'stock',
+          payload: { plateTypeId: plateType.id, format: plateType.format },
+        },
+      });
+
+      res.json({ success: true, data: plateType });
+    } catch (error) {
+      if (error.code === 'P2025') {
+        return res.status(404).json({ success: false, error: 'Plate type not found' });
+      }
+      res.status(500).json({ success: false, error: 'Failed to archive plate type' });
+    }
+  },
+
+  async getAllTypes(req: Request, res: Response) {
+    try {
+      const plateTypes = await prisma.plateType.findMany({
+        where: { isActive: true },
+        orderBy: { format: 'asc' },
+      });
+      
+      const plateTypesWithStock = await Promise.all(
+        plateTypes.map(async (plateType) => {
+          const movements = await prisma.plateMovement.aggregate({
+            where: { plateTypeId: plateType.id },
+            _sum: { quantity: true },
+          });
+          
+          const currentStock = movements._sum.quantity || 0;
+          const isDeficit = currentStock < plateType.minStockThreshold;
+          
+          console.log(`Plate ${plateType.format}: total movements sum = ${currentStock}`);
+          
+          return {
+            ...plateType,
+            currentStock,
+            isDeficit,
+          };
+        })
+      );
+      
+      res.json({
+        success: true,
+        data: plateTypesWithStock,
+        count: plateTypesWithStock.length,
+      });
+    } catch (error) {
+      console.error('Error fetching plate types:', error);
+      res.status(500).json({ success: false, error: 'Failed to fetch plate types' });
+    }
+  },
+
   async getTypeById(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      
-      // Исправление: гарантируем, что id — строка
       const plateTypeId = typeof id === 'string' ? id : id[0];
 
       const plateType = await prisma.plateType.findUnique({
@@ -180,7 +152,6 @@ async getAllTypes(req: Request, res: Response) {
         return res.status(404).json({ success: false, error: 'Plate type not found' });
       }
 
-      // Вычисляем остаток
       const stock = await prisma.plateMovement.groupBy({
         by: ['plateTypeId'],
         where: { plateTypeId },
@@ -204,24 +175,22 @@ async getAllTypes(req: Request, res: Response) {
     }
   },
 
-  // POST /api/plates/types - ДЕЙСТВИЕ: Создать тип пластины
   async createType(req: Request, res: Response) {
     try {
       const validatedData = createPlateTypeSchema.parse(req.body);
       
-      // Преобразуем otherParams в правильный тип для Prisma (Json)
       const dataToCreate = {
         format: validatedData.format,
         manufacturer: validatedData.manufacturer,
         otherParams: validatedData.otherParams ?? {},
         minStockThreshold: validatedData.minStockThreshold,
+        areaSqm: validatedData.areaSqm,
       };
 
       const plateType = await prisma.plateType.create({
         data: dataToCreate,
       });
 
-      // Логируем событие
       await prisma.eventLog.create({
         data: {
           eventType: 'plate.type.created',
@@ -240,25 +209,23 @@ async getAllTypes(req: Request, res: Response) {
     }
   },
 
-  // PUT /api/plates/types/:id - ДЕЙСТВИЕ: Обновить тип пластины
   async updateType(req: Request, res: Response) {
     try {
       const { id } = req.params;
       const plateTypeId = typeof id === 'string' ? id : id[0];
       const validatedData = createPlateTypeSchema.partial().parse(req.body);
       
-      // Убираем undefined значения
       const dataToUpdate: any = {};
       if (validatedData.format !== undefined) dataToUpdate.format = validatedData.format;
       if (validatedData.manufacturer !== undefined) dataToUpdate.manufacturer = validatedData.manufacturer;
       if (validatedData.otherParams !== undefined) dataToUpdate.otherParams = validatedData.otherParams;
+      if (validatedData.areaSqm !== undefined) dataToUpdate.areaSqm = validatedData.areaSqm;
       
       const plateType = await prisma.plateType.update({
         where: { id: plateTypeId },
         data: dataToUpdate,
       });
       
-      // Логируем событие
       await prisma.eventLog.create({
         data: {
           eventType: 'plate.type.updated',
@@ -283,7 +250,6 @@ async getAllTypes(req: Request, res: Response) {
     }
   },
 
-  // PUT /api/plates/types/:id/threshold - ДЕЙСТВИЕ: Задать минимальный остаток
   async updateThreshold(req: Request, res: Response) {
     try {
       const { id } = req.params;
@@ -295,7 +261,6 @@ async getAllTypes(req: Request, res: Response) {
         data: { minStockThreshold: validatedData.minStockThreshold },
       });
 
-      // Логируем событие
       await prisma.eventLog.create({
         data: {
           eventType: 'plate.threshold.updated',
@@ -320,14 +285,10 @@ async getAllTypes(req: Request, res: Response) {
     }
   },
 
-  // --- PlateMovement operations - Поступление ---
-
-  // POST /api/plates/movements/purchase - ДЕЙСТВИЕ: Зафиксировать закупку пластин
   async recordPurchase(req: Request, res: Response) {
     try {
       const validatedData = recordPurchaseSchema.parse(req.body);
       
-      // Проверяем существование типа пластины
       const plateType = await prisma.plateType.findUnique({
         where: { id: validatedData.plateTypeId },
       });
@@ -336,7 +297,6 @@ async getAllTypes(req: Request, res: Response) {
         return res.status(404).json({ success: false, error: 'Plate type not found' });
       }
 
-      // Создаем движение
       const movement = await prisma.plateMovement.create({
         data: {
           plateTypeId: validatedData.plateTypeId,
@@ -346,7 +306,6 @@ async getAllTypes(req: Request, res: Response) {
         },
       });
 
-      // Логируем событие
       await prisma.eventLog.create({
         data: {
           eventType: 'plate.movement',
@@ -361,7 +320,6 @@ async getAllTypes(req: Request, res: Response) {
         },
       });
 
-      // Проверяем дефицит после движения
       await checkAndLogDeficit(validatedData.plateTypeId, plateType.minStockThreshold);
 
       res.status(201).json({
@@ -377,7 +335,6 @@ async getAllTypes(req: Request, res: Response) {
     }
   },
 
-  // POST /api/plates/movements/return - ДЕЙСТВИЕ: Зафиксировать возврат пластин
   async recordReturn(req: Request, res: Response) {
     try {
       const validatedData = recordReturnSchema.parse(req.body);
@@ -425,7 +382,6 @@ async getAllTypes(req: Request, res: Response) {
     }
   },
 
-  // POST /api/plates/movements/correction - ДЕЙСТВИЕ: Корректировка прихода
   async recordCorrection(req: Request, res: Response) {
     try {
       const validatedData = recordCorrectionSchema.parse(req.body);
@@ -475,14 +431,10 @@ async getAllTypes(req: Request, res: Response) {
     }
   },
 
-  // --- PlateMovement operations - Использование по заказу ---
-
-  // POST /api/plates/movements/usage - ДЕЙСТВИЕ: Списать пластины по заказу
   async recordUsage(req: Request, res: Response) {
     try {
       const validatedData = recordUsageSchema.parse(req.body);
       
-      // Проверяем существование типа пластины
       const plateType = await prisma.plateType.findUnique({
         where: { id: validatedData.plateTypeId },
       });
@@ -491,7 +443,6 @@ async getAllTypes(req: Request, res: Response) {
         return res.status(404).json({ success: false, error: 'Plate type not found' });
       }
 
-      // Проверяем существование заказа и его статус
       const order = await prisma.order.findUnique({
         where: { id: validatedData.orderId },
       });
@@ -500,7 +451,6 @@ async getAllTypes(req: Request, res: Response) {
         return res.status(404).json({ success: false, error: 'Order not found' });
       }
 
-      // Проверяем статус заказа: только PROCESS
       if (order.status !== 'PROCESS') {
         return res.status(400).json({
           success: false,
@@ -508,7 +458,6 @@ async getAllTypes(req: Request, res: Response) {
         });
       }
 
-      // Создаем движение (отрицательное количество для списания)
       const movement = await prisma.plateMovement.create({
         data: {
           plateTypeId: validatedData.plateTypeId,
@@ -552,9 +501,6 @@ async getAllTypes(req: Request, res: Response) {
     }
   },
 
-  // --- PlateMovement operations - Брак ---
-
-  // POST /api/plates/movements/scrap/client - ДЕЙСТВИЕ: Зафиксировать брак (клиент)
   async recordScrapClient(req: Request, res: Response) {
     try {
       const validatedData = recordScrapClientSchema.parse(req.body);
@@ -616,7 +562,6 @@ async getAllTypes(req: Request, res: Response) {
     }
   },
 
-  // POST /api/plates/movements/scrap/production - ДЕЙСТВИЕ: Зафиксировать брак (производство)
   async recordScrapProduction(req: Request, res: Response) {
     try {
       const validatedData = recordScrapProductionSchema.parse(req.body);
@@ -678,7 +623,6 @@ async getAllTypes(req: Request, res: Response) {
     }
   },
 
-  // POST /api/plates/movements/scrap/material - ДЕЙСТВИЕ: Зафиксировать брак (материалы)
   async recordScrapMaterial(req: Request, res: Response) {
     try {
       const validatedData = recordScrapMaterialSchema.parse(req.body);
@@ -691,7 +635,6 @@ async getAllTypes(req: Request, res: Response) {
         return res.status(404).json({ success: false, error: 'Plate type not found' });
       }
 
-      // orderId опционален для брака материалов
       if (validatedData.orderId) {
         const order = await prisma.order.findUnique({
           where: { id: validatedData.orderId },
@@ -743,9 +686,6 @@ async getAllTypes(req: Request, res: Response) {
     }
   },
 
-  // --- PlateMovement operations - Производственные потери ---
-
-  // POST /api/plates/movements/loss/test - ДЕЙСТВИЕ: Зафиксировать тест
   async recordLossTest(req: Request, res: Response) {
     try {
       const validatedData = recordLossTestSchema.parse(req.body);
@@ -793,7 +733,6 @@ async getAllTypes(req: Request, res: Response) {
     }
   },
 
-  // POST /api/plates/movements/loss/calibration - ДЕЙСТВИЕ: Зафиксировать калибровку
   async recordLossCalibration(req: Request, res: Response) {
     try {
       const validatedData = recordLossCalibrationSchema.parse(req.body);
@@ -841,7 +780,6 @@ async getAllTypes(req: Request, res: Response) {
     }
   },
 
-  // POST /api/plates/movements/loss/equipment - ДЕЙСТВИЕ: Зафиксировать сбой оборудования
   async recordLossEquipment(req: Request, res: Response) {
     try {
       const validatedData = recordLossEquipmentSchema.parse(req.body);
@@ -890,7 +828,6 @@ async getAllTypes(req: Request, res: Response) {
     }
   },
 
-  // GET /api/plates/stock - Текущие остатки
   async getStock(req: Request, res: Response) {
     try {
       const stockData = await prisma.plateMovement.groupBy({
@@ -935,7 +872,6 @@ async getAllTypes(req: Request, res: Response) {
   },
 };
 
-// Вспомогательная функция для проверки дефицита
 async function checkAndLogDeficit(plateTypeId: string, threshold: number) {
   const stock = await prisma.plateMovement.groupBy({
     by: ['plateTypeId'],

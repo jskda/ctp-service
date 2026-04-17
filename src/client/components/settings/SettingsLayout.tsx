@@ -1,8 +1,6 @@
 import { useState } from 'react';
-import { Settings, Users, Database, AlertTriangle, Clock, Bell } from 'lucide-react';
-import { Card } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText } from 'lucide-react'; // добавим иконку
+import { Settings, Users, AlertTriangle, Clock, FileText, Droplet } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface SettingsLayoutProps {
   children: React.ReactNode;
@@ -12,9 +10,9 @@ const settingsSections = [
   { id: 'system', label: 'Система', icon: Settings },
   { id: 'clients', label: 'Клиенты', icon: Users },
   { id: 'stock', label: 'Остатки', icon: AlertTriangle },
+  { id: 'developer', label: 'Проявитель', icon: Droplet },
   { id: 'events', label: 'Лог событий', icon: Clock },
-  { id: 'reports', label: 'Отчёты', icon: FileText }, // новая вкладка
-  { id: 'notifications', label: 'Уведомления', icon: Bell },
+  { id: 'reports', label: 'Отчёты', icon: FileText },
 ];
 
 export function SettingsLayout({ children }: SettingsLayoutProps) {
